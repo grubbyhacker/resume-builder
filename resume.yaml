@@ -1,0 +1,63 @@
+profile:
+  name: Jane Placeholder
+  location: San Francisco, CA
+  email: jane.placeholder@example.com
+  phone: "+1 555 010 1234"
+  linkedin: https://www.linkedin.com/in/jane-placeholder
+  website: https://jane-placeholder.example.com
+
+headline: Senior Software Engineer
+
+summary:
+  - Builds reliable product platforms with a focus on simple systems, clear ownership, and measurable outcomes.
+  - Experienced across backend services, developer tooling, data workflows, and production operations.
+
+skills:
+  - Python
+  - TypeScript
+  - Distributed Systems
+  - APIs
+  - PostgreSQL
+  - Observability
+  - CI/CD
+  - Technical Leadership
+
+experience:
+  - company: Example Systems
+    location: Remote
+    roles:
+      - title: Senior Software Engineer
+        start: "2022-01"
+        end: Present
+        bullets:
+          - Led development of a service platform used by internal product teams to ship features with safer deployments.
+          - Improved build and release workflows, reducing manual release steps and increasing deployment consistency.
+          - Partnered with product and operations teams to define practical reliability targets and incident response practices.
+      - title: Software Engineer
+        start: "2019-06"
+        end: "2021-12"
+        bullets:
+          - Built API integrations and background processing workflows for customer-facing product features.
+          - Added monitoring and alerting for critical jobs, reducing time to detect production failures.
+  - company: Placeholder Labs
+    location: New York, NY
+    roles:
+      - title: Software Engineer
+        start: "2016-08"
+        end: "2019-05"
+        bullets:
+          - Developed internal tools that improved support team visibility into account and billing workflows.
+          - Maintained PostgreSQL-backed services with attention to query performance and operational clarity.
+
+education:
+  - institution: State University
+    location: Springfield, IL
+    degree: B.S. Computer Science
+    start: "2012"
+    end: "2016"
+
+writing_publications:
+  - title: Practical Notes on Reliable Deployments
+    outlet: Engineering Blog
+    date: "2024"
+    url: https://jane-placeholder.example.com/reliable-deployments

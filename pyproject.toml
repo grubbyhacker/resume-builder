@@ -1,0 +1,14 @@
+[project]
+name = "resume-builder"
+version = "0.1.0"
+description = "Minimal YAML-based resume build pipeline."
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "jinja2>=3.1.0",
+    "jsonschema>=4.0.0",
+    "pyyaml>=6.0.0",
+]
+
+[tool.uv]
+package = false

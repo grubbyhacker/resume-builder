@@ -1,0 +1,28 @@
+required_exact:
+  - "Jane Placeholder"
+  - "jane.placeholder@example.com"
+  - "Senior Software Engineer"
+  - "## Summary"
+  - "## Skills"
+  - "## Professional Experience"
+  - "Example Systems"
+  - "State University"
+
+required_order:
+  - "Jane Placeholder"
+  - "Senior Software Engineer"
+  - "## Summary"
+  - "## Skills"
+  - "## Professional Experience"
+  - "## Education"
+  - "## Writing/Publications"
+
+forbidden:
+  - "Lorem ipsum"
+  - "TODO"
+  - "Two-column"
+
+require_email: true
+forbid_tables: true
+forbid_images: true
+forbid_html_blocks: true

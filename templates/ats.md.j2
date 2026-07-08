@@ -1,0 +1,38 @@
+# {{ profile.name }}
+
+{{ profile.location }} | {{ profile.email }} | {{ profile.phone }} | {{ profile.linkedin }} | {{ profile.website }}
+
+## {{ headline }}
+
+## Summary
+{% for item in summary %}
+- {{ item }}
+{% endfor %}
+
+## Skills
+
+{{ skills | join(", ") }}
+
+## Professional Experience
+{% for job in experience %}
+### {{ job.company }} - {{ job.location }}
+{% for role in job.roles %}
+{{ role.title }} | {{ role.start }} - {{ role.end }}
+{% for bullet in role.bullets %}
+- {{ bullet }}
+{% endfor %}
+
+{% endfor %}
+{% endfor %}
+## Education
+{% for item in education %}
+### {{ item.institution }} - {{ item.location }}
+{{ item.degree }}{% if item.start is defined or item.end is defined %} | {{ item.start | default("") }}{% if item.end is defined %} - {{ item.end }}{% endif %}{% endif %}
+
+{% endfor %}
+{% if writing_publications is defined and writing_publications %}
+## Writing/Publications
+{% for item in writing_publications %}
+- {{ item.title }}{% if item.outlet is defined %}, {{ item.outlet }}{% endif %}{% if item.date is defined %}, {{ item.date }}{% endif %}{% if item.url is defined %}, {{ item.url }}{% endif %}
+{% endfor %}
+{% endif %}
