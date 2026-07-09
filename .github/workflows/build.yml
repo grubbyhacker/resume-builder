@@ -83,7 +83,7 @@ jobs:
         run: echo "RESUME_BUILD_DATE=$(date -u +%Y%m%d)" >> "$GITHUB_ENV"
 
       - name: Build release artifacts
-        run: make pdf
+        run: make render-markdown pdf
 
       - name: Export build metadata
         id: metadata
@@ -95,6 +95,7 @@ jobs:
           tag_name: ${{ steps.metadata.outputs.release_tag }}
           name: Resume ${{ steps.metadata.outputs.release_tag }}
           generate_release_notes: true
+          fail_on_unmatched_files: true
           files: |
             ${{ steps.metadata.outputs.markdown_asset }}
             ${{ steps.metadata.outputs.docx_asset }}
