@@ -146,7 +146,9 @@ You can also run `make check-office` directly inside a dev container or CI envir
 
 ## Releases
 
-On pushes to `main`, GitHub Actions runs checks, runs the Office render job, and creates a GitHub Release.
+On pushes to `main`, GitHub Actions runs checks and the Office render job. It creates a GitHub Release only when files that can affect generated resume artifacts changed, such as `resume.yaml`, schema, templates, render/check scripts, Python dependencies, `Makefile`, or `mise.toml`.
+
+Documentation, agent instructions, Dependabot config, and workflow-only changes do not create resume releases. A release should mean the downloadable resume artifacts changed.
 
 Release assets:
 
