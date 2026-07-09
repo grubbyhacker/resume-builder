@@ -9,7 +9,7 @@ from pathlib import Path
 
 import yaml
 
-from build_metadata import build_date, copy_named_artifact, load_resume, named_artifact_path
+from build_metadata import build_date, load_resume, named_artifact_path
 
 
 def require_soffice() -> str:
@@ -41,25 +41,26 @@ def convert_docx_to_pdf(docx_path: Path, output_dir: Path) -> Path:
     return expected_pdf
 
 
-def build_pdf(docx_path: Path, resume_path: Path, output_path: Path, date_override: str | None) -> int:
+def build_pdf(docx_path: Path | None, resume_path: Path, output_path: Path | None, date_override: str | None) -> int:
     resume = load_resume(resume_path)
     date_string = build_date(date_override)
+    if docx_path is None:
+        docx_path = named_artifact_path(Path("output"), resume, date_string, ".docx")
+    if output_path is None:
+        output_path = named_artifact_path(Path("output"), resume, date_string, ".pdf")
     rendered_pdf = convert_docx_to_pdf(docx_path, output_path.parent)
     if rendered_pdf != output_path:
         output_path.unlink(missing_ok=True)
         rendered_pdf.replace(output_path)
-    named_pdf = named_artifact_path(output_path.parent, resume, date_string, ".pdf")
-    copy_named_artifact(output_path, named_pdf)
     print(f"Rendered {output_path}")
-    print(f"Rendered {named_pdf}")
     return 0
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Render ATS DOCX to PDF and named upload PDF.")
-    parser.add_argument("--docx", type=Path, default=Path("output/ats.docx"))
+    parser.add_argument("--docx", type=Path, default=None)
     parser.add_argument("--resume", type=Path, default=Path("resume.yaml"))
-    parser.add_argument("--output", type=Path, default=Path("output/ats.pdf"))
+    parser.add_argument("--output", type=Path, default=None)
     parser.add_argument("--date", default=None, help="UTC build date override in YYYYMMDD form")
     args = parser.parse_args()
 

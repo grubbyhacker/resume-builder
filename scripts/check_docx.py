@@ -10,6 +10,7 @@ import yaml
 from docx import Document
 from docx.oxml.ns import qn
 
+from build_metadata import default_artifact_path
 from check_parse import (
     as_string_list,
     check_forbidden,
@@ -102,29 +103,30 @@ def check_docx_text(text: str, expectations: dict, resume: dict) -> list[str]:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Run structural and content checks against ATS DOCX.")
-    parser.add_argument("--docx", type=Path, default=Path("output/ats.docx"))
     parser.add_argument("--resume", type=Path, default=Path("resume.yaml"))
+    parser.add_argument("--docx", type=Path, default=None)
     parser.add_argument("--expectations", type=Path, default=Path("tests/expected/ats_text_expectations.yaml"))
     args = parser.parse_args()
 
     try:
-        document = Document(args.docx)
+        docx_path = args.docx or default_artifact_path(args.resume, Path("output"), None, ".docx")
+        document = Document(docx_path)
         text = docx_text(document)
         resume = load_resume(args.resume)
         expectations = load_expectations(args.expectations)
-        errors = check_docx_structure(args.docx, document)
+        errors = check_docx_structure(docx_path, document)
         errors.extend(check_docx_text(text, expectations, resume))
     except (OSError, ValueError, zipfile.BadZipFile, yaml.YAMLError) as exc:
         print(f"DOCX check error: {exc}", file=sys.stderr)
         return 1
 
     if errors:
-        print(f"DOCX checks failed for {args.docx}:", file=sys.stderr)
+        print(f"DOCX checks failed for {docx_path}:", file=sys.stderr)
         for error in errors:
             print(f"  - {error}", file=sys.stderr)
         return 1
 
-    print(f"DOCX checks passed for {args.docx}")
+    print(f"DOCX checks passed for {docx_path}")
     return 0
 
 

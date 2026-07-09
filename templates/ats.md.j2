@@ -31,9 +31,14 @@
 
 {% for role in job.roles %}
 {{ role.title }} | {{ role.start }} - {{ role.end }}
+{% if role.description is defined %}
+{{ role.description }}
+{% endif %}
+{% if role.bullets is defined %}
 {% for bullet in role.bullets %}
 - {{ bullet }}
 {% endfor %}
+{% endif %}
 
 {% endfor %}
 {% endfor %}

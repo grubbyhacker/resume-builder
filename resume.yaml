@@ -29,7 +29,7 @@ projects:
     description: Multi-agent orchestration layer that lets any orchestrator delegate coding tasks to ephemeral worker agents over MCP, making delegation, task state, model choice, git worktrees, and logs explicit and observable through an OpenTUI dashboard. Removes the human-as-relay bottleneck in multi-agent coding workflows.
   - name: YouKnowMe
     url: https://github.com/grubbyhacker/youknowme
-    description: Personal-memory MCP server exposing a curated, Git-versioned Markdown corpus to AI agents via authenticated RAG over a LanceDB vector store, secured with Cloudflare Tunnel and Access JWT, with a Curator agent that turns uploads into reviewable pull requests.
+    description: Personal-memory MCP server exposing a curated, Git-versioned Markdown corpus to AI agents via authenticated RAG over a LanceDB vector store, secured via Cloudflare Tunnel and Cloudflare Access JWT assertion validation, with a Curator agent that turns uploads into reviewable pull requests.
 
 experience:
   - company: Crusoe AI
@@ -51,31 +51,22 @@ experience:
       - title: Engineering Director
         start: Aug 2018
         end: Nov 2024
+        description: Led developer productivity and code-health organizations, typically 40 to 100 engineers, that set engineering-excellence standards and drove down technical debt across much larger engineering populations. Ran several organizations concurrently, including a Google-wide Code Health and Reliability mandate alongside domain-specific productivity leadership for Core ML / Cloud AI and Core Data Infrastructure. 
         bullets:
-          - Led developer productivity and code-health organizations, typically 40 to 100 engineers, that set engineering-excellence standards and drove down technical debt across much larger engineering populations.
-          - Ran several organizations concurrently, including a Google-wide Code Health and Reliability mandate alongside domain-specific productivity leadership for Core ML / Cloud AI and Core Data Infrastructure.
-          - "Core ML Infrastructure and Cloud AI: Led concurrent productivity organizations for Core ML and Vertex AI, managing a 60-engineer team supporting about 1,200 Core ML engineers and directing technical-debt reduction across TensorFlow, JAX, XLA, and evaluation systems."
-          - Directed CI/CD strategy for the generative AI development lifecycle in Google Cloud, supporting Gemini and other first-party models.
-          - "Core Data Infrastructure: Led the developer productivity and engineering-excellence organization serving about 1,200 engineers building the data foundations behind Search, Ads, YouTube, and Geo."
-          - Drove code-health initiatives across one of Google's most critical infrastructure organizations.
-          - "Google-wide Code Health and Reliability: Built and led the team responsible for developer tooling used broadly across Google engineering, elevating configuration management as a first-class engineering concern."
-          - "Research and Patents: Sponsored applied research and patent work by teams under my leadership, in partnership with academic collaborators, with publications at ICSE, ESEC/FSE, and IEEE TSE and issued U.S. patents in code coverage, mutation testing, and ML-assisted developer tooling."
+          - "Core ML Infrastructure and Cloud AI: Led concurrent productivity organizations for Core ML and Vertex AI, managing a 60-engineer team supporting about 1,200 Core ML engineers and directing technical-debt reduction across TensorFlow, JAX, XLA, and evaluation systems. Directed CI/CD strategy for the generative AI development lifecycle in Google Cloud, supporting Gemini and other first-party models."
+          - "Core Data Infrastructure: Led the developer productivity and engineering-excellence organization serving about 1,200 engineers building the data foundations behind Search, Ads, YouTube, and Geo. Drove code-health initiatives across one of Google's most critical infrastructure organizations."
+          - "Google-wide Code Health and Reliability: Built and led the team responsible for developer tooling used broadly across Google engineering, elevating configuration management as a first-class engineering concern. Research and Patents: Sponsored applied research and patent work by teams under my leadership, in partnership with academic collaborators, with publications at ICSE, ESEC/FSE, and IEEE TSE and issued U.S. patents in code coverage, mutation testing, and ML-assisted developer tooling."
       - title: Senior Engineering Manager
         start: Apr 2011
         end: Aug 2018
-        bullets:
-          - Progressed through developer-productivity leadership roles across Shopping, Ads, and Analytics.
-          - Led teams of up to 100 engineers across Mountain View, Pittsburgh, Irvine, and Zurich, resolving long-standing developer-velocity bottlenecks in Ads and Analytics.
+        description: Progressed through developer-productivity leadership roles across Shopping, Ads, and Analytics. Led teams of up to 100 engineers across Mountain View, Pittsburgh, Irvine, and Zurich, resolving long-standing developer-velocity bottlenecks in Ads and Analytics.
   - company: Microsoft
     location: ""
     roles:
       - title: Principal Test Manager
         start: Jan 1998
         end: Mar 2011
-        bullets:
-          - Advanced through roles of increasing scope in software quality and test engineering, culminating as Principal Test Manager.
-          - Built and led teams across Exchange Server, SQL Server, and Microsoft Advertising.
-          - Worked deeply in query processing, XML systems, and ML-based ad relevance and selection across large-scale server, data, and advertising systems.
+        description: Advanced through roles of increasing scope in software quality and test engineering, culminating as Principal Test Manager. Built and led teams across Exchange Server, SQL Server, and Microsoft Advertising. Worked deeply in query processing, XML systems, and ML-based ad relevance and selection across large-scale server, data, and advertising systems.
 
 education:
   - institution: Missouri University of Science and Technology

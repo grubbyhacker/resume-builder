@@ -8,7 +8,7 @@ from pathlib import Path
 import yaml
 from jinja2 import Environment, FileSystemLoader, StrictUndefined, TemplateError, select_autoescape
 
-from build_metadata import build_date, copy_named_artifact, named_artifact_path
+from build_metadata import build_date, named_artifact_path
 
 
 def load_resume(path: Path) -> dict:
@@ -19,9 +19,11 @@ def load_resume(path: Path) -> dict:
     return data
 
 
-def render(resume_path: Path, template_path: Path, output_path: Path, date_override: str | None) -> int:
+def render(resume_path: Path, template_path: Path, output_path: Path | None, date_override: str | None) -> int:
     resume = load_resume(resume_path)
     date_string = build_date(date_override)
+    if output_path is None:
+        output_path = named_artifact_path(Path("output"), resume, date_string, ".md")
     environment = Environment(
         loader=FileSystemLoader(str(template_path.parent)),
         undefined=StrictUndefined,
@@ -34,10 +36,7 @@ def render(resume_path: Path, template_path: Path, output_path: Path, date_overr
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(rendered, encoding="utf-8")
-    named_markdown = named_artifact_path(output_path.parent, resume, date_string, ".md")
-    copy_named_artifact(output_path, named_markdown)
     print(f"Rendered {output_path}")
-    print(f"Rendered {named_markdown}")
     return 0
 
 
@@ -45,7 +44,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Render ATS-safe Markdown from resume YAML.")
     parser.add_argument("--resume", type=Path, default=Path("resume.yaml"))
     parser.add_argument("--template", type=Path, default=Path("templates/ats.md.j2"))
-    parser.add_argument("--output", type=Path, default=Path("output/ats.md"))
+    parser.add_argument("--output", type=Path, default=None)
     parser.add_argument("--date", default=None, help="UTC build date override in YYYYMMDD form")
     args = parser.parse_args()
 

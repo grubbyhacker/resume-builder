@@ -7,24 +7,29 @@ from pathlib import Path
 
 import yaml
 
-from build_metadata import build_date, load_resume, named_artifact_path, release_tag
+from build_metadata import build_date, build_identifier, build_sha, load_resume, named_artifact_path, release_tag
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Print resume build metadata for shell/CI use.")
     parser.add_argument("--resume", type=Path, default=Path("resume.yaml"))
     parser.add_argument("--date", default=None, help="UTC build date override in YYYYMMDD form")
+    parser.add_argument("--build-sha", default=None, help="Short or full commit SHA for traceable release tags")
     args = parser.parse_args()
 
     try:
         resume = load_resume(args.resume)
         date_string = build_date(args.date)
+        sha = build_sha(args.build_sha)
         markdown = named_artifact_path(Path("output"), resume, date_string, ".md")
+        structured_markdown = named_artifact_path(Path("output"), resume, date_string, ".structured.md")
         docx = named_artifact_path(Path("output"), resume, date_string, ".docx")
         pdf = named_artifact_path(Path("output"), resume, date_string, ".pdf")
         print(f"build_date={date_string}")
-        print(f"release_tag={release_tag(date_string)}")
+        print(f"build_identifier={build_identifier(date_string, sha)}")
+        print(f"release_tag={release_tag(date_string, sha)}")
         print(f"markdown_asset={markdown}")
+        print(f"structured_markdown_asset={structured_markdown}")
         print(f"docx_asset={docx}")
         print(f"pdf_asset={pdf}")
         return 0

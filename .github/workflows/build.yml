@@ -82,8 +82,11 @@ jobs:
       - name: Set release build date
         run: echo "RESUME_BUILD_DATE=$(date -u +%Y%m%d)" >> "$GITHUB_ENV"
 
+      - name: Set release build SHA
+        run: echo "RESUME_BUILD_SHA=${GITHUB_SHA::7}" >> "$GITHUB_ENV"
+
       - name: Build release artifacts
-        run: make render-markdown pdf
+        run: make render-markdown render-structured pdf
 
       - name: Export build metadata
         id: metadata
@@ -98,5 +101,6 @@ jobs:
           fail_on_unmatched_files: true
           files: |
             ${{ steps.metadata.outputs.markdown_asset }}
+            ${{ steps.metadata.outputs.structured_markdown_asset }}
             ${{ steps.metadata.outputs.docx_asset }}
             ${{ steps.metadata.outputs.pdf_asset }}

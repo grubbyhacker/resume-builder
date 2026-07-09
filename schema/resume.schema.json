@@ -77,11 +77,16 @@
     "role": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["title", "start", "end", "bullets"],
+      "required": ["title", "start", "end"],
+      "anyOf": [
+        { "required": ["description"] },
+        { "required": ["bullets"] }
+      ],
       "properties": {
         "title": { "type": "string", "minLength": 1 },
         "start": { "type": "string", "minLength": 1 },
         "end": { "type": "string", "minLength": 1 },
+        "description": { "type": "string", "minLength": 1 },
         "bullets": {
           "type": "array",
           "minItems": 1,

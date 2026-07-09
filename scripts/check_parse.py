@@ -8,6 +8,8 @@ from pathlib import Path
 
 import yaml
 
+from build_metadata import default_artifact_path
+
 
 EMAIL_RE = re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b")
 TABLE_RE = re.compile(r"^\s*\|.+\|\s*$", re.MULTILINE)
@@ -107,6 +109,7 @@ def expected_resume_strings(resume: dict) -> list[tuple[str, str]]:
                     continue
                 for key in ("title", "start", "end"):
                     append_string(role.get(key), f"experience[{job_index}].roles[{role_index}].{key}", strings)
+                append_string(role.get("description"), f"experience[{job_index}].roles[{role_index}].description", strings)
                 bullets = role.get("bullets", [])
                 if isinstance(bullets, list):
                     for bullet_index, bullet in enumerate(bullets):
@@ -177,17 +180,24 @@ def check_role_boundaries(text: str, resume: dict) -> list[str]:
         end = role_offsets[index + 1][2] if index + 1 < len(role_offsets) else len(text)
         role_text = text[start:end]
         bullets = role.get("bullets", [])
+        description = role.get("description")
+        cursor = -1
+        if isinstance(description, str):
+            description_offset = role_text.find(description)
+            if description_offset == -1:
+                errors.append(f"description missing from role block ({company} / {role.get('title')}): {description!r}")
+            else:
+                cursor = description_offset
         if not isinstance(bullets, list):
             continue
-        bullet_cursor = -1
         for bullet in bullets:
             if not isinstance(bullet, str):
                 continue
-            found = role_text.find(bullet, bullet_cursor + 1)
+            found = role_text.find(bullet, cursor + 1)
             if found == -1:
                 errors.append(f"bullet missing from role block ({company} / {role.get('title')}): {bullet!r}")
                 continue
-            bullet_cursor = found
+            cursor = found
 
     return errors
 
@@ -256,13 +266,14 @@ def check_ats_text(text: str, expectations: dict, resume: dict) -> list[str]:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Run data-driven parser-regression checks against ATS Markdown.")
-    parser.add_argument("--markdown", type=Path, default=Path("output/ats.md"))
     parser.add_argument("--resume", type=Path, default=Path("resume.yaml"))
+    parser.add_argument("--markdown", type=Path, default=None)
     parser.add_argument("--expectations", type=Path, default=Path("tests/expected/ats_text_expectations.yaml"))
     args = parser.parse_args()
 
     try:
-        text = args.markdown.read_text(encoding="utf-8")
+        markdown_path = args.markdown or default_artifact_path(args.resume, Path("output"), None, ".md")
+        text = markdown_path.read_text(encoding="utf-8")
         resume = load_resume(args.resume)
         expectations = load_expectations(args.expectations)
         errors = check_ats_text(text, expectations, resume)
@@ -271,12 +282,12 @@ def main() -> int:
         return 1
 
     if errors:
-        print(f"Parser checks failed for {args.markdown}:", file=sys.stderr)
+        print(f"Parser checks failed for {markdown_path}:", file=sys.stderr)
         for error in errors:
             print(f"  - {error}", file=sys.stderr)
         return 1
 
-    print(f"Parser checks passed for {args.markdown}")
+    print(f"Parser checks passed for {markdown_path}")
     return 0
 
 

@@ -1,5 +1,5 @@
 [tools]
-python = "3.12"
+python = "3.12.13"
 "aqua:astral-sh/uv" = "0.11.23"
 
 [tasks.sync]
@@ -20,4 +20,4 @@ run = "docker build -f .devcontainer/office-check.Dockerfile -t resume-builder-o
 
 [tasks.check-office-docker]
 description = "Run LibreOffice render checks in Docker without installing LibreOffice on the host"
-run = "docker image inspect resume-builder-office >/dev/null 2>&1 || docker build -f .devcontainer/office-check.Dockerfile -t resume-builder-office .; docker run --rm -e UV_PROJECT_ENVIRONMENT=/tmp/resume-builder-venv -v \"$PWD:/work\" -w /work resume-builder-office bash -lc 'mise trust && mise install && mise exec -- uv sync && make check-office'"
+run = "docker build -f .devcontainer/office-check.Dockerfile -t resume-builder-office . && docker run --rm -v \"$PWD:/work\" -w /work resume-builder-office bash -lc 'mise trust && make check-office'"

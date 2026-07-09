@@ -14,7 +14,7 @@ from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Inches, Pt, RGBColor
 
-from build_metadata import build_date, copy_named_artifact, named_artifact_path
+from build_metadata import build_date, build_identifier, build_sha, named_artifact_path
 
 
 BODY_FONT = "Arial"
@@ -192,6 +192,25 @@ def add_bullet(document: Document, text: str) -> None:
     set_run_font(run)
 
 
+def add_skill_bullet(document: Document, text: str) -> None:
+    paragraph = document.add_paragraph()
+    paragraph.paragraph_format.left_indent = Inches(0.25)
+    paragraph.paragraph_format.first_line_indent = Inches(-0.15)
+    paragraph.paragraph_format.space_after = Pt(3)
+    paragraph.paragraph_format.line_spacing = 1.05
+    bullet = paragraph.add_run("•\t")
+    set_run_font(bullet)
+    if ":" not in text:
+        run = paragraph.add_run(text)
+        set_run_font(run)
+        return
+    label, rest = text.split(":", 1)
+    label_run = paragraph.add_run(f"{label}:")
+    set_run_font(label_run, bold=True)
+    rest_run = paragraph.add_run(rest)
+    set_run_font(rest_run, bold=False)
+
+
 def add_summary(document: Document, summary: list[str]) -> None:
     add_section_heading(document, "Summary")
     for item in summary:
@@ -201,7 +220,7 @@ def add_summary(document: Document, summary: list[str]) -> None:
 def add_skills(document: Document, skills: list[str]) -> None:
     add_section_heading(document, "Skills")
     for skill in skills:
-        add_bullet(document, skill)
+        add_skill_bullet(document, skill)
 
 
 def add_projects(document: Document, projects: list[dict]) -> None:
@@ -230,7 +249,10 @@ def add_experience(document: Document, experience: list[dict]) -> None:
         keep_with_next(company)
         for role in job["roles"]:
             add_role_heading(document, role["title"], role["start"], role["end"])
-            for bullet in role["bullets"]:
+            if role.get("description"):
+                description = add_paragraph(document, role["description"])
+                set_paragraph_spacing(description, after=3, line=1.05)
+            for bullet in role.get("bullets", []):
                 add_bullet(document, bullet)
 
 
@@ -263,20 +285,27 @@ def add_document_language(document: Document) -> None:
     lang.set(qn("w:val"), "en-US")
 
 
-def set_core_properties(document: Document, date_string: str) -> None:
+def set_core_properties(document: Document, build_id: str, date_string: str, sha: str | None) -> None:
     properties = document.core_properties
-    properties.version = date_string
-    properties.keywords = f"resume-build-date:{date_string}"
+    properties.version = build_id
+    keywords = f"resume-build-date:{date_string}"
+    if sha is not None:
+        keywords = f"{keywords}; commit:{sha}"
+    properties.keywords = keywords
 
 
-def render_docx(resume_path: Path, output_path: Path, date_override: str | None) -> int:
+def render_docx(resume_path: Path, output_path: Path | None, date_override: str | None, sha_override: str | None) -> int:
     resume = load_resume(resume_path)
     date_string = build_date(date_override)
+    sha = build_sha(sha_override)
+    build_id = build_identifier(date_string, sha)
+    if output_path is None:
+        output_path = named_artifact_path(Path("output"), resume, date_string, ".docx")
     document = Document()
     configure_page(document)
     configure_styles(document)
     add_document_language(document)
-    set_core_properties(document, date_string)
+    set_core_properties(document, build_id, date_string, sha)
 
     add_title_block(document, resume["profile"], resume["headline"])
     add_summary(document, resume["summary"])
@@ -287,22 +316,20 @@ def render_docx(resume_path: Path, output_path: Path, date_override: str | None)
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     document.save(output_path)
-    named_docx = named_artifact_path(output_path.parent, resume, date_string, ".docx")
-    copy_named_artifact(output_path, named_docx)
     print(f"Rendered {output_path}")
-    print(f"Rendered {named_docx}")
     return 0
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Render ATS-safe DOCX from resume YAML.")
     parser.add_argument("--resume", type=Path, default=Path("resume.yaml"))
-    parser.add_argument("--output", type=Path, default=Path("output/ats.docx"))
+    parser.add_argument("--output", type=Path, default=None)
     parser.add_argument("--date", default=None, help="UTC build date override in YYYYMMDD form")
+    parser.add_argument("--build-sha", default=None, help="Short or full commit SHA for DOCX metadata")
     args = parser.parse_args()
 
     try:
-        return render_docx(args.resume, args.output, args.date)
+        return render_docx(args.resume, args.output, args.date, args.build_sha)
     except (OSError, ValueError, KeyError, yaml.YAMLError) as exc:
         print(f"DOCX render error: {exc}", file=sys.stderr)
         return 1

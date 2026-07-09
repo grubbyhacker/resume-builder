@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import os
 import re
-import shutil
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -10,6 +9,7 @@ import yaml
 
 
 DATE_ENV = "RESUME_BUILD_DATE"
+SHA_ENV = "RESUME_BUILD_SHA"
 
 
 def load_resume(path: Path) -> dict:
@@ -29,8 +29,26 @@ def build_date(value: str | None = None) -> str:
     return raw
 
 
-def release_tag(date_string: str) -> str:
-    return f"v{date_string[0:4]}.{date_string[4:6]}.{date_string[6:8]}"
+def build_sha(value: str | None = None) -> str | None:
+    raw = value or os.environ.get(SHA_ENV)
+    if raw is None or raw == "":
+        return None
+    if not re.fullmatch(r"[0-9a-fA-F]{7,40}", raw):
+        raise ValueError(f"build SHA must be 7-40 hex characters, got {raw!r}")
+    return raw[:7].lower()
+
+
+def build_identifier(date_string: str, sha: str | None) -> str:
+    if sha is None:
+        return date_string
+    return f"{date_string}-{sha}"
+
+
+def release_tag(date_string: str, sha: str | None = None) -> str:
+    base = f"v{date_string[0:4]}.{date_string[4:6]}.{date_string[6:8]}"
+    if sha is None:
+        return base
+    return f"{base}-{sha}"
 
 
 def profile_slug(name: str) -> str:
@@ -47,8 +65,6 @@ def named_artifact_path(output_dir: Path, resume: dict, date_string: str, suffix
     return output_dir / f"{profile_slug(profile['name'])}_{date_string}{suffix}"
 
 
-def copy_named_artifact(source: Path, destination: Path) -> None:
-    destination.parent.mkdir(parents=True, exist_ok=True)
-    if source.resolve() == destination.resolve():
-        return
-    shutil.copy2(source, destination)
+def default_artifact_path(resume_path: Path, output_dir: Path, date_override: str | None, suffix: str) -> Path:
+    resume = load_resume(resume_path)
+    return named_artifact_path(output_dir, resume, build_date(date_override), suffix)

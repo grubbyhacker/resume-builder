@@ -10,6 +10,7 @@ from pathlib import Path
 
 import yaml
 
+from build_metadata import default_artifact_path
 from check_parse import (
     as_string_list,
     check_forbidden,
@@ -159,7 +160,7 @@ def check_office(docx_path: Path, output_dir: Path, resume_path: Path, expectati
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Render DOCX through LibreOffice and check PDF/text output.")
-    parser.add_argument("--docx", type=Path, default=Path("output/ats.docx"))
+    parser.add_argument("--docx", type=Path, default=None)
     parser.add_argument("--output-dir", type=Path, default=Path("output/office-render"))
     parser.add_argument("--resume", type=Path, default=Path("resume.yaml"))
     parser.add_argument("--expectations", type=Path, default=Path("tests/expected/ats_text_expectations.yaml"))
@@ -167,7 +168,8 @@ def main() -> int:
     args = parser.parse_args()
 
     try:
-        return check_office(args.docx, args.output_dir, args.resume, args.expectations, args.max_pages)
+        docx_path = args.docx or default_artifact_path(args.resume, Path("output"), None, ".docx")
+        return check_office(docx_path, args.output_dir, args.resume, args.expectations, args.max_pages)
     except (OSError, RuntimeError, ValueError, yaml.YAMLError) as exc:
         print(f"Office check error: {exc}", file=sys.stderr)
         return 1

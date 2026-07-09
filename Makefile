@@ -1,12 +1,15 @@
-.PHONY: validate render render-markdown docx pdf check check-markdown check-docx check-tika check-urls check-office clean
+.PHONY: validate render render-markdown render-structured docx pdf check check-markdown check-structured check-docx check-tika check-urls check-office clean
 
 validate:
 	mise exec -- uv run python scripts/validate_yaml.py
 
-render: render-markdown docx
+render: render-markdown render-structured docx
 
 render-markdown: validate
 	mise exec -- uv run python scripts/render_markdown.py
+
+render-structured: validate
+	mise exec -- uv run python scripts/render_structured_markdown.py
 
 docx: validate
 	mise exec -- uv run python scripts/render_docx.py
@@ -14,10 +17,13 @@ docx: validate
 pdf: docx
 	mise exec -- uv run python scripts/build_pdf.py
 
-check: render check-markdown check-docx check-tika
+check: render check-markdown check-structured check-docx check-tika
 
 check-markdown:
 	mise exec -- uv run python scripts/check_parse.py
+
+check-structured:
+	mise exec -- uv run python scripts/check_structured_markdown.py
 
 check-docx:
 	mise exec -- uv run python scripts/check_docx.py
