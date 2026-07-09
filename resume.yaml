@@ -1,63 +1,92 @@
 profile:
-  name: Jane Placeholder
-  location: San Francisco, CA
-  email: jane.placeholder@example.com
-  phone: "+1 555 010 1234"
-  linkedin: https://www.linkedin.com/in/jane-placeholder
-  website: https://jane-placeholder.example.com
+  name: Roger Fleig
+  location: San Jose, CA
+  email: rogerfleig@gmail.com
+  phone: 425-516-9049
+  linkedin: https://linkedin.com/in/rogerfleig
+  websites:
+    - https://rogerfleig.substack.com
+    - https://fleig.us/writing
 
-headline: Senior Software Engineer
+headline: Engineering Leader - Developer Productivity, Infrastructure, and AI Platform Engineering
 
 summary:
-  - Builds reliable product platforms with a focus on simple systems, clear ownership, and measurable outcomes.
-  - Experienced across backend services, developer tooling, data workflows, and production operations.
+  - Engineering leader who builds and scales engineering organizations across developer productivity, large-scale infrastructure, and ML platform engineering.
+  - Track record of hiring and developing senior technical talent, founding new functions from zero, and setting the systems, standards, and tooling that let large engineering orgs move fast.
+  - Experienced leading engineering teams of up to 100 and driving productivity and code health for organizations of 1,200+ behind mission-critical infrastructure and foundational ML systems.
+  - Writes widely on agentic engineering, developer productivity, and the narrow pipe problem in AI-accelerated software delivery.
 
 skills:
-  - Python
-  - TypeScript
-  - Distributed Systems
-  - APIs
-  - PostgreSQL
-  - Observability
-  - CI/CD
-  - Technical Leadership
+  - "Leadership: Developer Productivity, Developer Experience (DevEx), Engineering Excellence, Code Health, Technical-Debt Reduction, Org Building, Hiring and Talent Development, Vendor Management, Platform Governance"
+  - "AI and Agent Tooling: Claude, Codex, Windsurf, multi-agent orchestration, enterprise AI tool adoption and enablement"
+  - "AI Infrastructure: MCP / Model Context Protocol, RAG, vector databases, LanceDB"
+  - "CI/CD and Platform: CI/CD, GitHub, GitHub Actions, GitLab, Argo CD, GKE, Kubernetes, Docker, Tailscale, NATS JetStream, Cloudflare"
+  - "Infrastructure as Code: Terraform, OpenTofu, Ansible, secrets management, Doppler, Ansible Vault"
+
+projects:
+  - name: codex-fleet
+    url: https://github.com/grubbyhacker/codex-fleet
+    description: Multi-agent orchestration layer that lets any orchestrator delegate coding tasks to ephemeral worker agents over MCP, making delegation, task state, model choice, git worktrees, and logs explicit and observable through an OpenTUI dashboard. Removes the human-as-relay bottleneck in multi-agent coding workflows.
+  - name: YouKnowMe
+    url: https://github.com/grubbyhacker/youknowme
+    description: Personal-memory MCP server exposing a curated, Git-versioned Markdown corpus to AI agents via authenticated RAG over a LanceDB vector store, secured with Cloudflare Tunnel and Access JWT, with a Curator agent that turns uploads into reviewable pull requests.
 
 experience:
-  - company: Example Systems
-    location: Remote
+  - company: Crusoe AI
+    location: ""
     roles:
-      - title: Senior Software Engineer
-        start: "2022-01"
-        end: Present
+      - title: Senior Director, Engineering Productivity
+        start: Dec 2024
+        end: Mar 2026
         bullets:
-          - Led development of a service platform used by internal product teams to ship features with safer deployments.
-          - Improved build and release workflows, reducing manual release steps and increasing deployment consistency.
-          - Partnered with product and operations teams to define practical reliability targets and incident response practices.
-      - title: Software Engineer
-        start: "2019-06"
-        end: "2021-12"
-        bullets:
-          - Built API integrations and background processing workflows for customer-facing product features.
-          - Added monitoring and alerting for critical jobs, reducing time to detect production failures.
-  - company: Placeholder Labs
-    location: New York, NY
+          - Founded and built the engineering productivity function from zero, personally hiring and growing the team to 10 engineers and establishing developer experience as a discipline within a rapidly scaling AI cloud company.
+          - Set the enterprise AI coding platform strategy, directing the rollout of Windsurf and Claude to 500+ users, owning enablement, adoption, and vendor management across Anthropic, Windsurf, and GitLab.
+          - Built the operating model for enterprise AI tool adoption, covering provisioning, usage reporting, support channels, and security review, establishing the governance framework the org now runs on.
+          - Directed the modernization of CI/CD infrastructure, migrating off aging local hardware to a GKE-based, multi-architecture runner platform built for scale.
+          - Absorbed peak build load and increased code churn from AI tooling, and enabled rapid adoption of ARM64 builds for new NVIDIA AI-fleet platforms.
+          - Established repository and platform governance standards across about 400 repositories, driving technical-debt reduction and compliance campaigns through Terraform-managed infrastructure and health tooling.
+  - company: Google
+    location: ""
     roles:
-      - title: Software Engineer
-        start: "2016-08"
-        end: "2019-05"
+      - title: Engineering Director
+        start: Aug 2018
+        end: Nov 2024
         bullets:
-          - Developed internal tools that improved support team visibility into account and billing workflows.
-          - Maintained PostgreSQL-backed services with attention to query performance and operational clarity.
+          - Led developer productivity and code-health organizations, typically 40 to 100 engineers, that set engineering-excellence standards and drove down technical debt across much larger engineering populations.
+          - Ran several organizations concurrently, including a Google-wide Code Health and Reliability mandate alongside domain-specific productivity leadership for Core ML / Cloud AI and Core Data Infrastructure.
+          - "Core ML Infrastructure and Cloud AI: Led concurrent productivity organizations for Core ML and Vertex AI, managing a 60-engineer team supporting about 1,200 Core ML engineers and directing technical-debt reduction across TensorFlow, JAX, XLA, and evaluation systems."
+          - Directed CI/CD strategy for the generative AI development lifecycle in Google Cloud, supporting Gemini and other first-party models.
+          - "Core Data Infrastructure: Led the developer productivity and engineering-excellence organization serving about 1,200 engineers building the data foundations behind Search, Ads, YouTube, and Geo."
+          - Drove code-health initiatives across one of Google's most critical infrastructure organizations.
+          - "Google-wide Code Health and Reliability: Built and led the team responsible for developer tooling used broadly across Google engineering, elevating configuration management as a first-class engineering concern."
+          - "Research and Patents: Sponsored applied research and patent work by teams under my leadership, in partnership with academic collaborators, with publications at ICSE, ESEC/FSE, and IEEE TSE and issued U.S. patents in code coverage, mutation testing, and ML-assisted developer tooling."
+      - title: Senior Engineering Manager
+        start: Apr 2011
+        end: Aug 2018
+        bullets:
+          - Progressed through developer-productivity leadership roles across Shopping, Ads, and Analytics.
+          - Led teams of up to 100 engineers across Mountain View, Pittsburgh, Irvine, and Zurich, resolving long-standing developer-velocity bottlenecks in Ads and Analytics.
+  - company: Microsoft
+    location: ""
+    roles:
+      - title: Principal Test Manager
+        start: Jan 1998
+        end: Mar 2011
+        bullets:
+          - Advanced through roles of increasing scope in software quality and test engineering, culminating as Principal Test Manager.
+          - Built and led teams across Exchange Server, SQL Server, and Microsoft Advertising.
+          - Worked deeply in query processing, XML systems, and ML-based ad relevance and selection across large-scale server, data, and advertising systems.
 
 education:
-  - institution: State University
-    location: Springfield, IL
-    degree: B.S. Computer Science
-    start: "2012"
-    end: "2016"
-
-writing_publications:
-  - title: Practical Notes on Reliable Deployments
-    outlet: Engineering Blog
-    date: "2024"
-    url: https://jane-placeholder.example.com/reliable-deployments
+  - institution: Missouri University of Science and Technology
+    location: Rolla, MO
+    degree: Master of Science
+    field: Computer Science
+    start: "1995"
+    end: "1997"
+  - institution: Missouri University of Science and Technology
+    location: Rolla, MO
+    degree: Bachelor of Science
+    field: Geology and Geophysics
+    start: "1990"
+    end: "1995"

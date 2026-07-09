@@ -1,0 +1,89 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+
+import argparse
+import sys
+import time
+import urllib.error
+import urllib.request
+from pathlib import Path
+
+import yaml
+
+from check_parse import check_role_boundaries, check_yaml_content_present, load_resume
+
+
+def request(method: str, url: str, data: bytes | None = None, content_type: str | None = None) -> tuple[int, bytes]:
+    headers = {}
+    if content_type:
+        headers["Content-Type"] = content_type
+    req = urllib.request.Request(url, data=data, headers=headers, method=method)
+    with urllib.request.urlopen(req, timeout=20) as response:
+        return response.status, response.read()
+
+
+def wait_for_tika(server_url: str, timeout_seconds: int) -> None:
+    deadline = time.monotonic() + timeout_seconds
+    last_error: Exception | None = None
+    while time.monotonic() < deadline:
+        try:
+            status, _ = request("GET", f"{server_url.rstrip('/')}/tika")
+            if status == 200:
+                return
+        except (OSError, urllib.error.URLError) as exc:
+            last_error = exc
+        time.sleep(1)
+    raise RuntimeError(f"Tika server did not become ready at {server_url}: {last_error}")
+
+
+def extract_text(server_url: str, docx_path: Path) -> str:
+    data = docx_path.read_bytes()
+    status, body = request(
+        "PUT",
+        f"{server_url.rstrip('/')}/tika",
+        data=data,
+        content_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    )
+    if status != 200:
+        raise RuntimeError(f"Tika returned HTTP {status}")
+    text = body.decode("utf-8", errors="replace")
+    if not text.strip():
+        raise RuntimeError("Tika returned no text content")
+    return text
+
+
+def check_tika(docx_path: Path, resume_path: Path, server_url: str, timeout_seconds: int) -> int:
+    wait_for_tika(server_url, timeout_seconds)
+    resume = load_resume(resume_path)
+    text = extract_text(server_url, docx_path)
+    errors = []
+    errors.extend(check_yaml_content_present(text, resume))
+    errors.extend(check_role_boundaries(text, resume))
+
+    if errors:
+        print(f"Tika checks failed for {docx_path}:", file=sys.stderr)
+        for error in errors:
+            print(f"  - {error}", file=sys.stderr)
+        return 1
+
+    print(f"Tika checks passed for {docx_path}")
+    return 0
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Check DOCX extraction through a running Apache Tika server.")
+    parser.add_argument("--docx", type=Path, default=Path("output/ats.docx"))
+    parser.add_argument("--resume", type=Path, default=Path("resume.yaml"))
+    parser.add_argument("--server-url", default="http://127.0.0.1:9998")
+    parser.add_argument("--timeout", type=int, default=45)
+    args = parser.parse_args()
+
+    try:
+        return check_tika(args.docx, args.resume, args.server_url, args.timeout)
+    except (OSError, RuntimeError, ValueError, yaml.YAMLError, urllib.error.URLError) as exc:
+        print(f"Tika check error: {exc}", file=sys.stderr)
+        return 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

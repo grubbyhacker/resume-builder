@@ -1,0 +1,58 @@
+quirks:
+  - id: bullets-render-as-1
+    symptom: "Word list bullets import as '1.' repeated, one per bullet"
+    observed_on: ["workday-style form, 2026-07"]
+    root_cause: "ATS converts list numbering to a Markdown ordered list on extraction"
+    workaround: "Emit literal '•\\t' glyphs on normal paragraphs; no Word list style"
+    guard: "check_docx: require literal bullet glyphs; forbid List Bullet numPr"
+    status: "DECIDED - DOCX output uses literal bullet glyphs instead of native Word list bullets because the observed ATS failure is worse than the design impurity. Validate against a live Workday-style import before closing."
+
+  - id: unrecognized-heading-phantom-job
+    symptom: "A section becomes a fake Work History entry with the heading as company name"
+    observed_on: ["workday-style form, 2026-07 (PUBLICATIONS & PATENTS, WRITING)"]
+    root_cause: "Headings outside the parser's dictionary don't close the prior section; content is swept into experience"
+    workaround: "Use only dictionary-standard headings: Summary, Skills, Projects, Professional Experience, Education. No custom sections."
+    guard: "forbidden: non-standard headings; required_order over the standard set"
+
+  - id: trailing-content-absorbed-into-last-job
+    symptom: "Skills and Projects text lands inside the last job's Role Description"
+    observed_on: ["workday-style form, 2026-07"]
+    root_cause: "Content after the final dated job block, with no new job block, attaches to that job"
+    workaround: "Place Skills and Projects ABOVE Professional Experience; keep Education (a recognized section) as the only thing after the last job"
+    guard: "required_order: Skills and Projects appear before Professional Experience"
+
+  - id: title-noun-sentence-start-phantom
+    symptom: "A phantom job title is invented from a sentence's first word ('Author', 'Executive', 'Lead')"
+    observed_on: ["workday-style form, 2026-07"]
+    root_cause: "Parser treats a leading role-noun as a job title"
+    workaround: "Never begin a section body or bullet with a title-like noun; rephrase"
+    guard: "check: forbid section/bullet text matching a role-noun start (Author|Executive|Lead|Manager|Director) — heuristic"
+
+  - id: concurrent-titles-one-heading-misassigned
+    symptom: "Two titles under one company heading; all bullets attach to one title, the other is empty"
+    observed_on: ["multiple sites, 2026-07 (Google Director + Senior EM)"]
+    root_cause: "Parser can't attribute a shared bullet block to two titles"
+    workaround: "Model each title as its own role/entry with its own dates and bullets (schema already supports roles[])"
+    guard: "check_role_boundaries: every role's bullets fall within that role's block"
+
+  - id: first-bullet-demoted-to-lead-sentence
+    symptom: "A job's first bullet is imported as the role's intro line, not a bullet"
+    observed_on: ["workday-style form, 2026-07 (Microsoft)"]
+    root_cause: "Parser promotes the first line of a role to the description when there's no intro paragraph"
+    workaround: "For short entries, use a single description paragraph instead of a bullet list"
+    guard: "registry note only; not auto-enforced"
+
+  - id: degree-field-not-detected
+    symptom: "Field of study not extracted into the education form field"
+    observed_on: ["workday-style form, 2026-07"]
+    root_cause: "'MS in X' abbreviation on one comma-joined line doesn't map to degree+field"
+    workaround: "Spell degree out ('Master of Science'), keep 'field' a separate YAML key, put institution on its own line"
+    guard: "check: education renders degree and field as distinct, detectable tokens"
+    residual: "Exotic majors (e.g. 'Geology and Geophysics') may be absent from a site's dropdown — manual entry unavoidable"
+
+  - id: ocr-mangles-special-chars
+    symptom: "Em-dashes and '~' dropped or garbled on OCR/PDF import"
+    observed_on: ["PDF-upload path, 2026-07"]
+    root_cause: "OCR mishandles non-ASCII punctuation"
+    workaround: "Prefer hyphens/periods; write 'about' not '~'; prefer .docx upload over PDF"
+    guard: "forbid '—' and '~' in rendered output"

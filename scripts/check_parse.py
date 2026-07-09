@@ -13,9 +13,18 @@ EMAIL_RE = re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b")
 TABLE_RE = re.compile(r"^\s*\|.+\|\s*$", re.MULTILINE)
 IMAGE_RE = re.compile(r"!\[[^\]]*]\([^)]*\)")
 HTML_BLOCK_RE = re.compile(r"^\s*</?[A-Za-z][^>]*>\s*$", re.MULTILINE)
+ROLE_NOUN_START_RE = re.compile(r"^(?:[-•]\s*)?(Author|Executive|Lead|Manager|Director)\b")
 
 
 def load_expectations(path: Path) -> dict:
+    with path.open("r", encoding="utf-8") as handle:
+        data = yaml.safe_load(handle)
+    if not isinstance(data, dict):
+        raise ValueError(f"{path}: expected a YAML mapping at the document root")
+    return data
+
+
+def load_resume(path: Path) -> dict:
     with path.open("r", encoding="utf-8") as handle:
         data = yaml.safe_load(handle)
     if not isinstance(data, dict):
@@ -51,11 +60,187 @@ def check_forbidden(text: str, forbidden: list[str]) -> list[str]:
     return [f"forbidden string found: {item!r}" for item in forbidden if item in text]
 
 
-def check_ats_text(text: str, expectations: dict) -> list[str]:
+def append_string(value: object, label: str, strings: list[tuple[str, str]]) -> None:
+    if isinstance(value, str) and value:
+        strings.append((label, value))
+
+
+def expected_resume_strings(resume: dict) -> list[tuple[str, str]]:
+    strings: list[tuple[str, str]] = []
+    profile = resume.get("profile", {})
+    if isinstance(profile, dict):
+        for key in ("name", "location", "email", "phone", "linkedin"):
+            append_string(profile.get(key), f"profile.{key}", strings)
+        websites = profile.get("websites", [])
+        if isinstance(websites, list):
+            for index, website in enumerate(websites):
+                append_string(website, f"profile.websites[{index}]", strings)
+
+    append_string(resume.get("headline"), "headline", strings)
+
+    for section_name in ("summary", "skills"):
+        items = resume.get(section_name, [])
+        if isinstance(items, list):
+            for index, item in enumerate(items):
+                append_string(item, f"{section_name}[{index}]", strings)
+
+    projects = resume.get("projects", [])
+    if isinstance(projects, list):
+        for project_index, project in enumerate(projects):
+            if not isinstance(project, dict):
+                continue
+            for key in ("name", "url", "description"):
+                append_string(project.get(key), f"projects[{project_index}].{key}", strings)
+
+    experience = resume.get("experience", [])
+    if isinstance(experience, list):
+        for job_index, job in enumerate(experience):
+            if not isinstance(job, dict):
+                continue
+            append_string(job.get("company"), f"experience[{job_index}].company", strings)
+            append_string(job.get("location"), f"experience[{job_index}].location", strings)
+            roles = job.get("roles", [])
+            if not isinstance(roles, list):
+                continue
+            for role_index, role in enumerate(roles):
+                if not isinstance(role, dict):
+                    continue
+                for key in ("title", "start", "end"):
+                    append_string(role.get(key), f"experience[{job_index}].roles[{role_index}].{key}", strings)
+                bullets = role.get("bullets", [])
+                if isinstance(bullets, list):
+                    for bullet_index, bullet in enumerate(bullets):
+                        append_string(
+                            bullet,
+                            f"experience[{job_index}].roles[{role_index}].bullets[{bullet_index}]",
+                            strings,
+                        )
+
+    education = resume.get("education", [])
+    if isinstance(education, list):
+        for education_index, item in enumerate(education):
+            if not isinstance(item, dict):
+                continue
+            for key in ("institution", "location", "degree", "field", "start", "end"):
+                append_string(item.get(key), f"education[{education_index}].{key}", strings)
+
+    return strings
+
+
+def role_heading(role: dict) -> str:
+    return f"{role['title']} | {role['start']} - {role['end']}"
+
+
+def check_yaml_content_present(text: str, resume: dict) -> list[str]:
+    errors: list[str] = []
+    for label, expected in expected_resume_strings(resume):
+        if expected not in text:
+            errors.append(f"YAML content missing from output ({label}): {expected!r}")
+    return errors
+
+
+def check_role_boundaries(text: str, resume: dict) -> list[str]:
+    errors: list[str] = []
+    roles: list[tuple[str, dict]] = []
+
+    experience = resume.get("experience", [])
+    if not isinstance(experience, list):
+        return errors
+
+    for job in experience:
+        if not isinstance(job, dict):
+            continue
+        company = job.get("company", "<unknown company>")
+        job_roles = job.get("roles", [])
+        if not isinstance(job_roles, list):
+            continue
+        for role in job_roles:
+            if isinstance(role, dict):
+                roles.append((str(company), role))
+
+    role_offsets: list[tuple[str, dict, int]] = []
+    cursor = 0
+    for company, role in roles:
+        try:
+            heading = role_heading(role)
+        except KeyError as exc:
+            errors.append(f"role under {company} is missing key needed for heading: {exc}")
+            continue
+        found = text.find(heading, cursor)
+        if found == -1:
+            errors.append(f"role heading not found in expected order under {company}: {heading!r}")
+            continue
+        role_offsets.append((company, role, found))
+        cursor = found + len(heading)
+
+    for index, (company, role, start) in enumerate(role_offsets):
+        end = role_offsets[index + 1][2] if index + 1 < len(role_offsets) else len(text)
+        role_text = text[start:end]
+        bullets = role.get("bullets", [])
+        if not isinstance(bullets, list):
+            continue
+        bullet_cursor = -1
+        for bullet in bullets:
+            if not isinstance(bullet, str):
+                continue
+            found = role_text.find(bullet, bullet_cursor + 1)
+            if found == -1:
+                errors.append(f"bullet missing from role block ({company} / {role.get('title')}): {bullet!r}")
+                continue
+            bullet_cursor = found
+
+    return errors
+
+
+def check_role_noun_starts(text: str) -> list[str]:
+    errors: list[str] = []
+    for line_number, line in enumerate(text.splitlines(), start=1):
+        stripped = line.strip()
+        if not stripped:
+            continue
+        if stripped.startswith("#"):
+            continue
+        if ROLE_NOUN_START_RE.search(stripped):
+            errors.append(f"line starts with title-like noun at line {line_number}: {stripped!r}")
+    return errors
+
+
+def check_education_degree_fields(text: str, resume: dict) -> list[str]:
+    errors: list[str] = []
+    education = resume.get("education", [])
+    if not isinstance(education, list):
+        return errors
+
+    for index, item in enumerate(education):
+        if not isinstance(item, dict):
+            continue
+        degree = item.get("degree")
+        field = item.get("field")
+        institution = item.get("institution")
+        if not isinstance(degree, str) or not isinstance(field, str):
+            errors.append(f"education[{index}] must keep degree and field as separate YAML strings")
+            continue
+        if re.search(r"\b(BS|BA|MS|MA|PhD)\b", degree):
+            errors.append(f"education[{index}].degree should be spelled out, not abbreviated: {degree!r}")
+        rendered_line = f"{degree} in {field}"
+        if rendered_line not in text:
+            errors.append(f"education[{index}] degree/field line missing: {rendered_line!r}")
+        if isinstance(institution, str) and institution in text:
+            if text.find(institution) > text.find(rendered_line):
+                errors.append(f"education[{index}] institution should appear before degree/field")
+
+    return errors
+
+
+def check_ats_text(text: str, expectations: dict, resume: dict) -> list[str]:
     errors: list[str] = []
     errors.extend(check_required_exact(text, as_string_list(expectations.get("required_exact"), "required_exact")))
     errors.extend(check_order(text, as_string_list(expectations.get("required_order"), "required_order")))
     errors.extend(check_forbidden(text, as_string_list(expectations.get("forbidden"), "forbidden")))
+    errors.extend(check_yaml_content_present(text, resume))
+    errors.extend(check_role_boundaries(text, resume))
+    errors.extend(check_role_noun_starts(text))
+    errors.extend(check_education_degree_fields(text, resume))
 
     if expectations.get("require_email", True) and not EMAIL_RE.search(text):
         errors.append("no email address detected")
@@ -72,13 +257,15 @@ def check_ats_text(text: str, expectations: dict) -> list[str]:
 def main() -> int:
     parser = argparse.ArgumentParser(description="Run data-driven parser-regression checks against ATS Markdown.")
     parser.add_argument("--markdown", type=Path, default=Path("output/ats.md"))
+    parser.add_argument("--resume", type=Path, default=Path("resume.yaml"))
     parser.add_argument("--expectations", type=Path, default=Path("tests/expected/ats_text_expectations.yaml"))
     args = parser.parse_args()
 
     try:
         text = args.markdown.read_text(encoding="utf-8")
+        resume = load_resume(args.resume)
         expectations = load_expectations(args.expectations)
-        errors = check_ats_text(text, expectations)
+        errors = check_ats_text(text, expectations, resume)
     except (OSError, ValueError, yaml.YAMLError) as exc:
         print(f"Parse check error: {exc}", file=sys.stderr)
         return 1

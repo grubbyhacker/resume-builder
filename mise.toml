@@ -9,3 +9,15 @@ run = "uv sync"
 [tasks.check]
 description = "Validate, render, and run parser checks"
 run = "make check"
+
+[tasks.check-office]
+description = "Run LibreOffice-based DOCX render checks"
+run = "make check-office"
+
+[tasks.check-office-docker-build]
+description = "Build the local Docker image used for LibreOffice render checks"
+run = "docker build -f .devcontainer/office-check.Dockerfile -t resume-builder-office ."
+
+[tasks.check-office-docker]
+description = "Run LibreOffice render checks in Docker without installing LibreOffice on the host"
+run = "docker image inspect resume-builder-office >/dev/null 2>&1 || docker build -f .devcontainer/office-check.Dockerfile -t resume-builder-office .; docker run --rm -e UV_PROJECT_ENVIRONMENT=/tmp/resume-builder-venv -v \"$PWD:/work\" -w /work resume-builder-office bash -lc 'mise trust && mise install && mise exec -- uv sync && make check-office'"

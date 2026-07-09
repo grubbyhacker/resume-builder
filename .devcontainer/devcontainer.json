@@ -1,0 +1,18 @@
+{
+  "name": "resume-builder",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": ".."
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "redhat.vscode-yaml"
+      ]
+    }
+  },
+  "postCreateCommand": "mise trust && mise install && mise exec -- uv sync",
+  "remoteEnv": {
+    "MISE_YES": "1"
+  }
+}

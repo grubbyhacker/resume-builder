@@ -1,6 +1,6 @@
 # {{ profile.name }}
 
-{{ profile.location }} | {{ profile.email }} | {{ profile.phone }} | {{ profile.linkedin }} | {{ profile.website }}
+{{ ([profile.location, profile.email, profile.phone, profile.linkedin] + profile.websites) | join(" | ") }}
 
 ## {{ headline }}
 
@@ -11,11 +11,24 @@
 
 ## Skills
 
-{{ skills | join(", ") }}
+{% for skill in skills %}
+- {{ skill }}
+{% endfor %}
 
+{% if projects is defined and projects %}
+## Projects
+{% for project in projects %}
+### {{ project.name }}
+{% if project.url is defined %}{{ project.url }}
+
+{% endif %}{{ project.description }}
+
+{% endfor %}
+{% endif %}
 ## Professional Experience
 {% for job in experience %}
-### {{ job.company }} - {{ job.location }}
+### {{ job.company }}{% if job.location %} - {{ job.location }}{% endif %}
+
 {% for role in job.roles %}
 {{ role.title }} | {{ role.start }} - {{ role.end }}
 {% for bullet in role.bullets %}
@@ -27,12 +40,6 @@
 ## Education
 {% for item in education %}
 ### {{ item.institution }} - {{ item.location }}
-{{ item.degree }}{% if item.start is defined or item.end is defined %} | {{ item.start | default("") }}{% if item.end is defined %} - {{ item.end }}{% endif %}{% endif %}
+{{ item.degree }}{% if item.field is defined %} in {{ item.field }}{% endif %}{% if item.start is defined or item.end is defined %} | {{ item.start | default("") }}{% if item.end is defined %} - {{ item.end }}{% endif %}{% endif %}
 
 {% endfor %}
-{% if writing_publications is defined and writing_publications %}
-## Writing/Publications
-{% for item in writing_publications %}
-- {{ item.title }}{% if item.outlet is defined %}, {{ item.outlet }}{% endif %}{% if item.date is defined %}, {{ item.date }}{% endif %}{% if item.url is defined %}, {{ item.url }}{% endif %}
-{% endfor %}
-{% endif %}
