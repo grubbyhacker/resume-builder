@@ -55,12 +55,45 @@ jobs:
           name: office-render
           path: output/office-render/
 
-  release:
+  release-needed:
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    outputs:
+      should_release: ${{ steps.changed.outputs.should_release }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Check for resume artifact changes
+        id: changed
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if git rev-parse --verify HEAD^ >/dev/null 2>&1; then
+            changed_files="$(git diff --name-only HEAD^ HEAD)"
+          else
+            changed_files="$(git show --pretty='' --name-only HEAD)"
+          fi
+
+          echo "Changed files:"
+          printf '%s\n' "$changed_files"
+
+          if printf '%s\n' "$changed_files" | grep -Eq '^(resume\.yaml|schema/.*|templates/.*|scripts/.*|pyproject\.toml|uv\.lock|Makefile|mise\.toml)$'; then
+            echo "should_release=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "should_release=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  release:
+    if: needs.release-needed.outputs.should_release == 'true'
     runs-on: ubuntu-latest
     needs:
       - validate
       - office-render
+      - release-needed
     permissions:
       contents: write
     steps:
