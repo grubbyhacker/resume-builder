@@ -19,7 +19,7 @@ summary:
 skills:
   - "Leadership: Developer Productivity, Developer Experience (DevEx), Engineering Excellence, Code Health, Technical-Debt Reduction, Org Building, Hiring and Talent Development, Vendor Management, Platform Governance"
   - "AI and Agent Tooling: Claude, Codex, Windsurf, multi-agent orchestration, enterprise AI tool adoption and enablement"
-  - "AI Infrastructure: MCP / Model Context Protocol, RAG, vector databases, LanceDB"
+  - "AI Infrastructure: MCP / Model Context Protocol, RAG, vector databases"
   - "CI/CD and Platform: CI/CD, GitHub, GitHub Actions, GitLab, Argo CD, GKE, Kubernetes, Docker, Tailscale, NATS JetStream, Cloudflare"
   - "Infrastructure as Code: Terraform, OpenTofu, Ansible, secrets management, Doppler, Ansible Vault"
 
