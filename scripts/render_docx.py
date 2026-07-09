@@ -300,7 +300,7 @@ def render_docx(resume_path: Path, output_path: Path | None, date_override: str 
     sha = build_sha(sha_override)
     build_id = build_identifier(date_string, sha)
     if output_path is None:
-        output_path = named_artifact_path(Path("output"), resume, date_string, ".docx")
+        output_path = named_artifact_path(Path("output"), resume, date_string, ".docx", resume_path)
     document = Document()
     configure_page(document)
     configure_styles(document)

@@ -45,9 +45,9 @@ def build_pdf(docx_path: Path | None, resume_path: Path, output_path: Path | Non
     resume = load_resume(resume_path)
     date_string = build_date(date_override)
     if docx_path is None:
-        docx_path = named_artifact_path(Path("output"), resume, date_string, ".docx")
+        docx_path = named_artifact_path(Path("output"), resume, date_string, ".docx", resume_path)
     if output_path is None:
-        output_path = named_artifact_path(Path("output"), resume, date_string, ".pdf")
+        output_path = named_artifact_path(Path("output"), resume, date_string, ".pdf", resume_path)
     rendered_pdf = convert_docx_to_pdf(docx_path, output_path.parent)
     if rendered_pdf != output_path:
         output_path.unlink(missing_ok=True)

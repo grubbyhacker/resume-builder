@@ -9,6 +9,7 @@ fi
 image="${TIKA_DOCKER_IMAGE:-apache/tika:3.1.0.0-full}"
 container="resume-builder-tika-$$"
 port_file="$(mktemp)"
+resume="${RESUME:-resume.yaml}"
 
 cleanup() {
   docker rm -f "$container" >/dev/null 2>&1 || true
@@ -20,4 +21,4 @@ docker run --rm -d --name "$container" -p 127.0.0.1::9998 "$image" >/dev/null
 docker port "$container" 9998/tcp | sed 's/.*://' > "$port_file"
 port="$(cat "$port_file")"
 
-mise exec -- uv run python scripts/check_tika.py --server-url "http://127.0.0.1:${port}"
+mise exec -- uv run python scripts/check_tika.py --resume "$resume" --server-url "http://127.0.0.1:${port}"
