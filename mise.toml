@@ -20,4 +20,4 @@ run = "docker build -f .devcontainer/office-check.Dockerfile -t resume-builder-o
 
 [tasks.check-office-docker]
 description = "Run LibreOffice render checks in Docker without installing LibreOffice on the host"
-run = "docker build -f .devcontainer/office-check.Dockerfile -t resume-builder-office . && docker run --rm -v \"$PWD:/work\" -w /work resume-builder-office bash -lc 'mise trust && make check-office'"
+run = "docker build -f .devcontainer/office-check.Dockerfile -t resume-builder-office . && docker run --rm -e RESUME=\"${RESUME:-resume.yaml}\" -v \"$PWD:/work\" -w /work resume-builder-office bash -lc 'mise trust && make check-office'"

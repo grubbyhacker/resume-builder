@@ -10,6 +10,7 @@ import yaml
 
 DATE_ENV = "RESUME_BUILD_DATE"
 SHA_ENV = "RESUME_BUILD_SHA"
+DEFAULT_RESUME_PATH = Path("resume.yaml")
 
 
 def load_resume(path: Path) -> dict:
@@ -58,13 +59,40 @@ def profile_slug(name: str) -> str:
     return "_".join(normalized.split())
 
 
-def named_artifact_path(output_dir: Path, resume: dict, date_string: str, suffix: str) -> Path:
+def variant_slug(resume_path: Path | None) -> str | None:
+    if resume_path is None:
+        return None
+    try:
+        if resume_path.resolve() == DEFAULT_RESUME_PATH.resolve():
+            return None
+    except OSError:
+        if resume_path == DEFAULT_RESUME_PATH:
+            return None
+
+    normalized = re.sub(r"[^A-Za-z0-9]+", "-", resume_path.stem).strip("-").lower()
+    if not normalized:
+        raise ValueError(f"{resume_path}: did not produce a usable variant slug")
+    return normalized
+
+
+def named_artifact_path(
+    output_dir: Path,
+    resume: dict,
+    date_string: str,
+    suffix: str,
+    resume_path: Path | None = None,
+) -> Path:
     profile = resume.get("profile")
     if not isinstance(profile, dict) or not isinstance(profile.get("name"), str):
         raise ValueError("resume profile.name is required for named artifact output")
-    return output_dir / f"{profile_slug(profile['name'])}_{date_string}{suffix}"
+    parts = [profile_slug(profile["name"])]
+    variant = variant_slug(resume_path)
+    if variant is not None:
+        parts.append(variant)
+    parts.append(date_string)
+    return output_dir / f"{'_'.join(parts)}{suffix}"
 
 
 def default_artifact_path(resume_path: Path, output_dir: Path, date_override: str | None, suffix: str) -> Path:
     resume = load_resume(resume_path)
-    return named_artifact_path(output_dir, resume, build_date(date_override), suffix)
+    return named_artifact_path(output_dir, resume, build_date(date_override), suffix, resume_path)

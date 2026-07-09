@@ -99,7 +99,7 @@ def render(resume_path: Path, output_path: Path | None, date_override: str | Non
     resume = load_resume(resume_path)
     date_string = build_date(date_override)
     if output_path is None:
-        output_path = named_artifact_path(Path("output"), resume, date_string, ".structured.md")
+        output_path = named_artifact_path(Path("output"), resume, date_string, ".structured.md", resume_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(render_structured(resume), encoding="utf-8")
     print(f"Rendered {output_path}")

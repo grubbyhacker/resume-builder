@@ -6,3 +6,6 @@ __pycache__/
 
 # Generated resume artifacts
 output/
+
+# Local one-off tailored resumes
+resumes/scratch/*.yaml

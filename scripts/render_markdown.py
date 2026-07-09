@@ -23,7 +23,7 @@ def render(resume_path: Path, template_path: Path, output_path: Path | None, dat
     resume = load_resume(resume_path)
     date_string = build_date(date_override)
     if output_path is None:
-        output_path = named_artifact_path(Path("output"), resume, date_string, ".md")
+        output_path = named_artifact_path(Path("output"), resume, date_string, ".md", resume_path)
     environment = Environment(
         loader=FileSystemLoader(str(template_path.parent)),
         undefined=StrictUndefined,

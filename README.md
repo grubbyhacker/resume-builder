@@ -8,7 +8,7 @@ This repo treats those failures as software bugs. The resume is data, the render
 
 ## What It Builds
 
-`resume.yaml` is the source of truth. From that file, the pipeline renders:
+`resume.yaml` is the default source of truth. From that file, the pipeline renders:
 
 - `output/First_Last_YYYYMMDD.md`: a plain ATS Markdown resume.
 - `output/First_Last_YYYYMMDD.structured.md`: an agent-readable structured Markdown projection of the YAML.
@@ -18,6 +18,11 @@ This repo treats those failures as software bugs. The resume is data, the render
 The generated filenames are the same names used for release artifacts. There is no separate `ats.*` copy. The date stamp is UTC and can be overridden with `RESUME_BUILD_DATE=YYYYMMDD` for reproducible builds.
 
 Generated files live under `output/` and are ignored by Git.
+
+Scratch resumes can be built on demand from ignored YAML files under `resumes/scratch/`. Scratch artifact names include the source filename as a variant slug, for example:
+
+- `output/Roger_Fleig_acme-platform-director_YYYYMMDD.docx`
+- `output/Roger_Fleig_acme-platform-director_YYYYMMDD.pdf`
 
 ## Design Choices
 
@@ -34,6 +39,7 @@ Some of these choices are intentionally unglamorous. The priority is predictable
 ## Repository Layout
 
 - `resume.yaml`: source resume content.
+- `resumes/scratch/`: ignored local workspace for one-off tailored resumes.
 - `schema/resume.schema.json`: JSON Schema for the YAML model.
 - `templates/ats.md.j2`: Markdown template.
 - `scripts/render_markdown.py`: YAML to ATS Markdown.
@@ -65,6 +71,16 @@ Experience roles may have a `description`, `bullets`, or both. Use `description`
 
 Agents should edit YAML only unless they are changing the pipeline itself. Generated files in `output/` are disposable build artifacts.
 
+For one-off tailoring, copy the default resume into scratch, edit it locally, and build only that file:
+
+```sh
+cp resume.yaml resumes/scratch/acme-platform-director.yaml
+make check RESUME=resumes/scratch/acme-platform-director.yaml
+make pdf RESUME=resumes/scratch/acme-platform-director.yaml
+```
+
+Files matching `resumes/scratch/*.yaml` are ignored by Git. If a tailored resume becomes useful enough to keep, move it out of `resumes/scratch/` and commit it as a tracked variant.
+
 ## Setup
 
 This repo uses `mise` to bootstrap tools and `uv` to manage Python dependencies.
@@ -80,6 +96,18 @@ Render Markdown, structured Markdown, and DOCX:
 
 ```sh
 make render
+```
+
+Render a scratch or alternate source file:
+
+```sh
+make render RESUME=resumes/scratch/acme-platform-director.yaml
+```
+
+Run the Dockerized Office check for a scratch source:
+
+```sh
+RESUME=resumes/scratch/acme-platform-director.yaml mise run check-office-docker
 ```
 
 Render the PDF as well:
