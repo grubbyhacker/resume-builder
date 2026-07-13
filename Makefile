@@ -1,4 +1,4 @@
-.PHONY: validate render render-markdown render-structured docx pdf check check-markdown check-structured check-docx check-tika check-urls check-office clean
+.PHONY: validate render render-markdown render-structured docx pdf check check-unit check-markdown check-structured check-docx check-tika check-urls check-office clean
 
 RESUME ?= resume.yaml
 
@@ -19,7 +19,10 @@ docx: validate
 pdf: docx
 	mise exec -- uv run python scripts/build_pdf.py --resume "$(RESUME)"
 
-check: render check-markdown check-structured check-docx check-tika
+check: render check-unit check-markdown check-structured check-docx check-tika
+
+check-unit:
+	PYTHONPATH=scripts mise exec -- uv run python -m unittest discover -s tests -p 'test_*.py'
 
 check-markdown:
 	mise exec -- uv run python scripts/check_parse.py --resume "$(RESUME)"

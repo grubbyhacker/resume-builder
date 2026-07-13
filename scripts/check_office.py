@@ -9,6 +9,7 @@ import sys
 from pathlib import Path
 
 import yaml
+from PIL import Image, ImageOps
 
 from build_metadata import default_artifact_path
 from check_parse import (
@@ -20,6 +21,11 @@ from check_parse import (
     load_expectations,
     load_resume,
 )
+
+
+PDF_RENDER_DPI = 144
+INK_THRESHOLD = 16
+MIN_BOTTOM_WHITESPACE_INCHES = 0.35
 
 
 def require_command(name: str) -> str:
@@ -79,14 +85,60 @@ def extract_pdf_text(pdf_path: Path, output_dir: Path) -> str:
     return text_path.read_text(encoding="utf-8")
 
 
-def render_pdf_pages(pdf_path: Path, output_dir: Path) -> None:
-    pdftoppm = shutil.which("pdftoppm")
-    if pdftoppm is None:
-        return
-    page_prefix = output_dir / "page"
-    result = run_command([pdftoppm, "-png", "-r", "144", str(pdf_path), str(page_prefix)])
+def prepare_page_render_dir(pdf_path: Path, output_dir: Path) -> Path:
+    for legacy_page_path in output_dir.glob("page-*.png"):
+        legacy_page_path.unlink()
+    page_dir = output_dir / f"{pdf_path.stem}-pages"
+    if page_dir.exists():
+        shutil.rmtree(page_dir)
+    page_dir.mkdir(parents=True)
+    return page_dir
+
+
+def render_pdf_pages(pdf_path: Path, output_dir: Path) -> list[Path]:
+    pdftoppm = require_command("pdftoppm")
+    page_dir = prepare_page_render_dir(pdf_path, output_dir)
+    page_prefix = page_dir / "page"
+    result = run_command(
+        [pdftoppm, "-png", "-r", str(PDF_RENDER_DPI), str(pdf_path), str(page_prefix)]
+    )
     if result.returncode != 0:
         raise RuntimeError(f"pdftoppm failed:\n{result.stderr}")
+    page_paths = sorted(page_dir.glob("page-*.png"), key=lambda path: int(path.stem.split("-")[-1]))
+    if not page_paths:
+        raise RuntimeError(f"pdftoppm created no page images in {page_dir}")
+    return page_paths
+
+
+def page_ink_bbox(page_path: Path) -> tuple[int, int, int, int] | None:
+    with Image.open(page_path) as image:
+        inverted = ImageOps.invert(image.convert("L"))
+        ink_mask = inverted.point(lambda value: 255 if value >= INK_THRESHOLD else 0)
+        return ink_mask.getbbox()
+
+
+def check_page_image_bounds(
+    page_paths: list[Path], min_bottom_whitespace_inches: float = MIN_BOTTOM_WHITESPACE_INCHES
+) -> list[str]:
+    errors: list[str] = []
+    min_bottom_whitespace = round(min_bottom_whitespace_inches * PDF_RENDER_DPI)
+    for page_number, page_path in enumerate(page_paths, start=1):
+        with Image.open(page_path) as image:
+            width, height = image.size
+        bbox = page_ink_bbox(page_path)
+        if bbox is None:
+            errors.append(f"rendered PDF page {page_number} contains no visible ink")
+            continue
+        left, top, right, bottom = bbox
+        if left == 0 or top == 0 or right == width or bottom == height:
+            errors.append(f"rendered PDF page {page_number} has content touching a page edge: {bbox!r}")
+        bottom_whitespace = height - bottom
+        if bottom_whitespace < min_bottom_whitespace:
+            errors.append(
+                f"rendered PDF page {page_number} has only {bottom_whitespace}px of bottom whitespace; "
+                f"minimum is {min_bottom_whitespace}px ({min_bottom_whitespace_inches:.2f}in at {PDF_RENDER_DPI} DPI)"
+            )
+    return errors
 
 
 def normalize_text(text: str) -> str:
@@ -138,13 +190,16 @@ def check_office(docx_path: Path, output_dir: Path, resume_path: Path, expectati
     pdf_path = convert_docx_to_pdf(docx_path, output_dir)
     page_count = pdf_page_count(pdf_path)
     text = extract_pdf_text(pdf_path, output_dir)
-    render_pdf_pages(pdf_path, output_dir)
+    page_paths = render_pdf_pages(pdf_path, output_dir)
 
     errors: list[str] = []
     if page_count < 1:
         errors.append("rendered PDF has no pages")
     if page_count > max_pages:
         errors.append(f"rendered PDF has {page_count} pages; maximum allowed is {max_pages}")
+    if len(page_paths) != page_count:
+        errors.append(f"Poppler reported {page_count} PDF pages but rendered {len(page_paths)} PNG files")
+    errors.extend(check_page_image_bounds(page_paths))
     errors.extend(check_pdf_text(text, expectations, resume))
 
     if errors:
