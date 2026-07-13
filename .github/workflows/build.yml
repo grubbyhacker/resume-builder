@@ -34,19 +34,8 @@ jobs:
       - name: Install mise
         uses: jdx/mise-action@v4
 
-      - name: Install office render dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends libreoffice-writer poppler-utils fonts-liberation
-
-      - name: Install toolchain
-        run: mise install
-
-      - name: Install dependencies
-        run: mise exec -- uv sync
-
-      - name: Run office render checks
-        run: make check-office
+      - name: Run office render checks in the pinned container
+        run: mise run check-office-docker
 
       - name: Upload office render artifacts
         if: always()
@@ -81,7 +70,8 @@ jobs:
           echo "Changed files:"
           printf '%s\n' "$changed_files"
 
-          if printf '%s\n' "$changed_files" | grep -Eq '^(resume\.yaml|schema/.*|templates/.*|scripts/.*|pyproject\.toml|uv\.lock|Makefile|mise\.toml)$'; then
+          artifact_paths='^(resume\.yaml|schema/.*|templates/.*|scripts/.*|pyproject\.toml|uv\.lock|Makefile|mise\.toml|\.devcontainer/(office-check\.Dockerfile|fontconfig\.conf))$'
+          if printf '%s\n' "$changed_files" | grep -Eq "$artifact_paths"; then
             echo "should_release=true" >> "$GITHUB_OUTPUT"
           else
             echo "should_release=false" >> "$GITHUB_OUTPUT"
@@ -103,11 +93,6 @@ jobs:
       - name: Install mise
         uses: jdx/mise-action@v4
 
-      - name: Install release render dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends libreoffice-writer poppler-utils fonts-liberation
-
       - name: Install toolchain
         run: mise install
 
@@ -121,7 +106,7 @@ jobs:
         run: echo "RESUME_BUILD_SHA=${GITHUB_SHA::7}" >> "$GITHUB_ENV"
 
       - name: Build release artifacts
-        run: make render-markdown render-structured pdf
+        run: mise run render-release-docker
 
       - name: Export build metadata
         id: metadata

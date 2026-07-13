@@ -21,3 +21,7 @@ run = "docker build -f .devcontainer/office-check.Dockerfile -t resume-builder-o
 [tasks.check-office-docker]
 description = "Run LibreOffice render checks in Docker without installing LibreOffice on the host"
 run = "docker build -f .devcontainer/office-check.Dockerfile -t resume-builder-office . && docker run --rm -e RESUME=\"${RESUME:-resume.yaml}\" -v \"$PWD:/work\" -w /work resume-builder-office bash -lc 'mise trust && make check-office'"
+
+[tasks.render-release-docker]
+description = "Build release artifacts in the same container used for Office verification"
+run = "docker build -f .devcontainer/office-check.Dockerfile -t resume-builder-office . && docker run --rm -e RESUME_BUILD_DATE -e RESUME_BUILD_SHA -v \"$PWD:/work\" -w /work resume-builder-office bash -lc 'mise trust && make render-markdown render-structured pdf'"

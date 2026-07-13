@@ -82,7 +82,9 @@ The editable source is `resume.yaml`. Its main sections are:
 - `experience`
 - `education`
 
-Experience roles may contain a `description`, `bullets`, or both. Descriptions render as prose paragraphs; bullets render as distinct achievements.
+Experience roles may contain a description alone or a description followed by bullets. Descriptions render as prose paragraphs; bullets render as distinct achievements. A role with bullets must have a description so an importer cannot silently promote the first achievement into unlabeled introductory prose.
+
+Experience dates use canonical `YYYY-MM` values, with `present` reserved for a current role. Education dates may use `YYYY` or `YYYY-MM`. Renderers convert these machine-readable values into familiar text such as `Dec 2024` and `Present`.
 
 Before any artifact is rendered, `scripts/validate_yaml.py` loads the YAML with `PyYAML` and validates it against the Draft 2020-12 schema in `schema/resume.schema.json`. The schema:
 
@@ -92,10 +94,13 @@ Before any artifact is rendered, `scripts/validate_yaml.py` loads the YAML with 
 - validates email and URI formats
 - requires at least one employer, role, and education record
 - requires a city/state-style location for every employer
-- requires every role to have title and dates plus a description, bullets, or both
+- requires every role to have a title, canonical dates, and a description
+- requires roles with bullets to begin with a distinct description
+- rejects start dates later than end dates
+- requires roles, employers, and education records to be reverse chronological
 - preserves project and education fields as separate structured values
 
-Validation errors include the failing path so content-model mistakes fail early instead of surfacing as malformed binaries.
+Date ordering and range checks are semantic validation performed after the JSON Schema passes. Cross-employer date overlaps are intentionally allowed because concurrent roles can be legitimate. Validation errors include the failing path so content-model mistakes fail early instead of surfacing as malformed binaries.
 
 ## Transformations
 
@@ -113,7 +118,7 @@ The template intentionally uses plain, conservative Markdown:
 - descriptions remain paragraphs and achievements remain bullets
 - education follows work history as the final recognized section
 
-The Markdown artifact is both distributable output and the simplest representation on which to run ATS regression checks.
+The Markdown artifact is both distributable output and the simplest representation on which to run ATS regression checks. Canonical source dates are formatted for human readers at this boundary.
 
 ### YAML to Structured Markdown
 
@@ -195,7 +200,7 @@ This validates the YAML, renders Markdown, structured Markdown, and DOCX, runs t
 
 ### ATS Markdown Checks
 
-`scripts/check_parse.py` combines data-driven expectations from `tests/expected/ats_text_expectations.yaml` with checks derived from the current YAML source. It verifies:
+`scripts/check_parse.py` combines stable policy expectations from `tests/expected/ats_text_expectations.yaml` with content and ordering checks derived from the current YAML source. Names, contact data, headlines, employers, role headings, dates, and education values do not need to be manually copied into the expectations file. It verifies:
 
 - required exact strings
 - required document and section order
@@ -259,11 +264,15 @@ If Docker is not installed locally, the Tika wrapper reports a skip. CI is expec
 
 ### Unit Tests
 
-The standard-library `unittest` suite currently covers the PNG analysis added to the Office checks:
+The standard-library `unittest` suite covers date semantics, role-schema policy, and PNG analysis:
 
+- canonical date parsing and human-readable formatting
+- start/end consistency and reverse-chronological ordering
+- the requirement that roles with bullets also have descriptions
 - grayscale inversion and thresholding produce the expected ink bounds
 - content inside the bottom safety zone fails
 - artifact-specific render directories remove stale pages and legacy generic PNGs
+- sparse final pages produce advisory diagnostics rather than hard failures
 
 Unit tests are run as part of `make check`.
 
@@ -275,7 +284,7 @@ The default suite intentionally does not require LibreOffice on the host. For th
 mise run check-office-docker
 ```
 
-The task builds or reuses `.devcontainer/office-check.Dockerfile`, which contains LibreOffice Writer, Poppler, Liberation fonts, Python, mise, uv, and the locked project dependencies. It mounts the repository into the container and runs:
+The task builds or reuses `.devcontainer/office-check.Dockerfile`, which pins the base image and contains LibreOffice Writer, Poppler, Fontconfig, Liberation fonts, Python, mise, uv, and the locked project dependencies. An explicit Fontconfig rule maps Arial to Liberation Sans in Linux. The repository is mounted into the container, which runs:
 
 ```sh
 make check-office
@@ -287,14 +296,15 @@ You can run `make check-office` directly in CI or a development environment that
 
 `scripts/check_office.py` independently converts the DOCX into `output/office-render/`, then:
 
-1. Uses `pdfinfo` stdout to parse the page count.
-2. Fails on zero pages or more than the configured maximum of three.
-3. Uses `pdftotext -layout` to create an extracted text file.
-4. Repairs extraction-time word hyphenation and normalizes whitespace.
-5. Reapplies required-text, ordering, forbidden-text, and YAML-losslessness checks.
-6. Rejects lines resembling bullets converted into `1. text`.
-7. Uses `pdftoppm` to render every page as a 144-DPI PNG.
-8. Confirms that the PNG count matches `pdfinfo`.
+1. Uses `fc-match` to verify that Arial resolves to Arial or Liberation Sans and reports the actual mapping.
+2. Uses `pdfinfo` stdout to parse the page count.
+3. Fails on zero pages or more than the configured maximum of three.
+4. Uses `pdftotext -layout` to create an extracted text file.
+5. Repairs extraction-time word hyphenation and normalizes whitespace.
+6. Reapplies required-text, ordering, forbidden-text, and YAML-losslessness checks.
+7. Rejects lines resembling bullets converted into `1. text`.
+8. Uses `pdftoppm` to render every page as a 144-DPI PNG.
+9. Confirms that the PNG count matches `pdfinfo`.
 
 ### PNG Isolation and Pixel Checks
 
@@ -313,7 +323,7 @@ Pillow analyzes an in-memory derivative of each untouched page image:
 3. Threshold values below 16 to ignore faint antialiasing noise.
 4. Calculate the bounding box of visible ink.
 
-The check fails if a page is blank, content touches any physical page edge, or the page has less than 0.35 inches of bottom whitespace. The original PNG remains unchanged for manual or multimodal-agent review.
+The check fails if a page is blank, content touches any physical page edge, or the page has less than 0.35 inches of bottom whitespace. If the final page contains less than one inch of vertical ink, the checker emits an advisory warning for a possible orphan or sparse trailing page; it does not fail because short final sections can be intentional. The original PNG remains unchanged for manual or multimodal-agent review.
 
 ### Visual Review
 
@@ -378,7 +388,7 @@ The registry is where deliberate ugliness is justified. A workaround that makes 
 
 `.github/workflows/build.yml` runs on pull requests and pushes to `main`.
 
-The validation job installs the pinned toolchain and runs `make check`. A separate Office job installs LibreOffice, Poppler, and Liberation fonts, runs `make check-office`, and uploads `output/office-render/` even when the check fails so the rendered evidence remains available for diagnosis.
+The validation job installs the pinned toolchain and runs `make check`. A separate Office job runs the shared pinned Office container and uploads `output/office-render/` even when the check fails so the rendered evidence remains available for diagnosis. Local verification, CI verification, and release rendering therefore use the same LibreOffice, Poppler, Fontconfig, and font environment.
 
 On pushes to `main`, a release-classification job examines the changed paths. It requests a release only when files capable of changing generated resume artifacts were modified, including:
 
@@ -389,10 +399,11 @@ On pushes to `main`, a release-classification job examines the changed paths. It
 - Python dependency files
 - `Makefile`
 - `mise.toml`
+- the Office-check Dockerfile and Fontconfig rule
 
 Documentation, agent instructions, Dependabot configuration, and workflow-only changes do not create resume releases. A release is intended to mean that the downloadable resume itself may have changed.
 
-The release job waits for validation and Office checks, sets a UTC build date and short commit SHA, rebuilds all artifacts, and publishes:
+The release job waits for validation and Office checks, sets a UTC build date and short commit SHA, rebuilds all artifacts in the shared Office container, and publishes:
 
 - ATS Markdown
 - structured Markdown
@@ -504,10 +515,9 @@ The pipeline intentionally does not claim to automate every form of correctness:
 - A real ATS import remains the final authority for parser behavior.
 - Visual review remains necessary for typography, overlap, balance, and semantic page-break quality.
 - Pixel checks detect edge and bottom-margin hazards, not arbitrary alignment errors.
-- Sparse trailing pages are reviewed rather than rejected by a generic heuristic.
+- Sparse trailing pages produce advisory telemetry and are reviewed rather than rejected by a generic heuristic.
 - URL checks are network-dependent and therefore optional.
 - Tika is skipped locally when Docker is unavailable.
-- The first-bullet-versus-description workaround is documented but not schema-enforced because it is a content decision.
 - There is no golden-image comparison or automated multimodal layout gate.
 
 The objective is not to pretend documents are perfectly testable. It is to automate the failures that can be made deterministic, preserve evidence for the ones that cannot, and make every release auditable.

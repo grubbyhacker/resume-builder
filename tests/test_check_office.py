@@ -6,7 +6,7 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw
 
-from check_office import check_page_image_bounds, page_ink_bbox, prepare_page_render_dir
+from check_office import check_page_image_bounds, page_ink_bbox, prepare_page_render_dir, sparse_trailing_page_warnings
 
 
 class PageImageChecksTest(unittest.TestCase):
@@ -46,6 +46,22 @@ class PageImageChecksTest(unittest.TestCase):
             self.assertEqual(prepared, page_dir)
             self.assertEqual(list(prepared.iterdir()), [])
             self.assertFalse(legacy_page_path.exists())
+
+    def test_sparse_trailing_page_is_advisory(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            page_paths = []
+            for page_number in (1, 2):
+                page_path = Path(temporary_directory) / f"page-{page_number}.png"
+                image = Image.new("RGB", (144, 144), "white")
+                bottom = 120 if page_number == 1 else 50
+                ImageDraw.Draw(image).rectangle((10, 10, 120, bottom), fill="black")
+                image.save(page_path)
+                page_paths.append(page_path)
+
+            warnings = sparse_trailing_page_warnings(page_paths, minimum_ink_height_inches=0.50)
+
+            self.assertEqual(len(warnings), 1)
+            self.assertIn("sparse trailing page", warnings[0])
 
 
 if __name__ == "__main__":

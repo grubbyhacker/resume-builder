@@ -17,6 +17,7 @@ from check_parse import (
     check_forbidden,
     check_order,
     check_required_exact,
+    expected_document_order,
     expected_resume_strings,
     load_expectations,
     load_resume,
@@ -26,6 +27,9 @@ from check_parse import (
 PDF_RENDER_DPI = 144
 INK_THRESHOLD = 16
 MIN_BOTTOM_WHITESPACE_INCHES = 0.35
+SPARSE_LAST_PAGE_INK_HEIGHT_INCHES = 1.0
+BODY_FONT = "Arial"
+ACCEPTED_BODY_FONT_FAMILIES = {"Arial", "Liberation Sans"}
 
 
 def require_command(name: str) -> str:
@@ -37,6 +41,26 @@ def require_command(name: str) -> str:
 
 def run_command(command: list[str]) -> subprocess.CompletedProcess[str]:
     return subprocess.run(command, check=False, text=True, capture_output=True)
+
+
+def resolve_font_family(font_name: str) -> str:
+    fc_match = require_command("fc-match")
+    result = run_command([fc_match, "-f", "%{family}\n", font_name])
+    if result.returncode != 0:
+        raise RuntimeError(f"fc-match failed for {font_name!r}:\n{result.stderr}")
+    family = result.stdout.strip().splitlines()[0] if result.stdout.strip() else ""
+    if not family:
+        raise RuntimeError(f"fc-match returned no family for {font_name!r}")
+    return family
+
+
+def check_font_mapping(font_name: str = BODY_FONT) -> tuple[str, list[str]]:
+    family = resolve_font_family(font_name)
+    resolved_families = {item.strip() for item in family.split(",")}
+    if resolved_families.isdisjoint(ACCEPTED_BODY_FONT_FAMILIES):
+        expected = ", ".join(sorted(ACCEPTED_BODY_FONT_FAMILIES))
+        return family, [f"{font_name!r} resolves to {family!r}; expected one of: {expected}"]
+    return family, []
 
 
 def convert_docx_to_pdf(docx_path: Path, output_dir: Path) -> Path:
@@ -141,6 +165,23 @@ def check_page_image_bounds(
     return errors
 
 
+def sparse_trailing_page_warnings(
+    page_paths: list[Path], minimum_ink_height_inches: float = SPARSE_LAST_PAGE_INK_HEIGHT_INCHES
+) -> list[str]:
+    if len(page_paths) < 2:
+        return []
+    bbox = page_ink_bbox(page_paths[-1])
+    if bbox is None:
+        return []
+    ink_height_inches = (bbox[3] - bbox[1]) / PDF_RENDER_DPI
+    if ink_height_inches >= minimum_ink_height_inches:
+        return []
+    return [
+        f"final PDF page contains only {ink_height_inches:.2f}in of vertical ink; "
+        f"review for a sparse trailing page or orphaned content (advisory threshold: {minimum_ink_height_inches:.2f}in)"
+    ]
+
+
 def normalize_text(text: str) -> str:
     text = re.sub(r"(?<=\w)-\s+(?=\w)", "", text)
     text = re.sub(r"(?<=\w)-(?=\w)", "", text)
@@ -166,6 +207,7 @@ def check_pdf_text(text: str, expectations: dict, resume: dict) -> list[str]:
             normalized_list(as_string_list(expectations.get("docx_required_order"), "docx_required_order")),
         )
     )
+    errors.extend(check_order(normalized, normalized_list(expected_document_order(resume, markdown=False))))
     errors.extend(
         check_forbidden(
             normalized,
@@ -187,12 +229,13 @@ def check_pdf_text(text: str, expectations: dict, resume: dict) -> list[str]:
 def check_office(docx_path: Path, output_dir: Path, resume_path: Path, expectations_path: Path, max_pages: int) -> int:
     resume = load_resume(resume_path)
     expectations = load_expectations(expectations_path)
+    resolved_font, font_errors = check_font_mapping()
     pdf_path = convert_docx_to_pdf(docx_path, output_dir)
     page_count = pdf_page_count(pdf_path)
     text = extract_pdf_text(pdf_path, output_dir)
     page_paths = render_pdf_pages(pdf_path, output_dir)
 
-    errors: list[str] = []
+    errors: list[str] = list(font_errors)
     if page_count < 1:
         errors.append("rendered PDF has no pages")
     if page_count > max_pages:
@@ -202,6 +245,9 @@ def check_office(docx_path: Path, output_dir: Path, resume_path: Path, expectati
     errors.extend(check_page_image_bounds(page_paths))
     errors.extend(check_pdf_text(text, expectations, resume))
 
+    for warning in sparse_trailing_page_warnings(page_paths):
+        print(f"Office check warning: {warning}", file=sys.stderr)
+
     if errors:
         print(f"Office checks failed for {docx_path}:", file=sys.stderr)
         for error in errors:
@@ -209,6 +255,7 @@ def check_office(docx_path: Path, output_dir: Path, resume_path: Path, expectati
         return 1
 
     print(f"Office checks passed for {docx_path}; rendered PDF has {page_count} page(s)")
+    print(f"Office font mapping: {BODY_FONT} -> {resolved_font}")
     print(f"Office render artifacts written to {output_dir}")
     return 0
 
