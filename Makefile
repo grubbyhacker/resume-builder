@@ -1,25 +1,52 @@
-.PHONY: validate render render-markdown render-structured docx pdf check check-unit check-markdown check-structured check-docx check-tika check-urls check-office clean
+.PHONY: validate render render-markdown render-structured docx pdf render-release check check-unit check-markdown check-structured check-docx check-tika check-urls check-office clean _render _render-markdown _render-structured _docx _pdf
 
 RESUME ?= resume.yaml
 
 validate:
 	mise exec -- uv run python scripts/validate_yaml.py --resume "$(RESUME)"
 
-render: render-markdown render-structured docx
+render:
+	$(MAKE) clean
+	$(MAKE) _render
 
-render-markdown: validate
+_render: _render-markdown _render-structured _docx
+
+render-markdown:
+	$(MAKE) clean
+	$(MAKE) _render-markdown
+
+_render-markdown: validate
 	mise exec -- uv run python scripts/render_markdown.py --resume "$(RESUME)"
 
-render-structured: validate
+render-structured:
+	$(MAKE) clean
+	$(MAKE) _render-structured
+
+_render-structured: validate
 	mise exec -- uv run python scripts/render_structured_markdown.py --resume "$(RESUME)"
 
-docx: validate
+docx:
+	$(MAKE) clean
+	$(MAKE) _docx
+
+_docx: validate
 	mise exec -- uv run python scripts/render_docx.py --resume "$(RESUME)"
 
-pdf: docx
+pdf:
+	$(MAKE) clean
+	$(MAKE) _pdf
+
+_pdf: _docx
 	mise exec -- uv run python scripts/build_pdf.py --resume "$(RESUME)"
 
-check: render check-unit check-markdown check-structured check-docx check-tika
+render-release:
+	$(MAKE) clean
+	$(MAKE) _render-markdown _render-structured _pdf
+
+check:
+	$(MAKE) clean
+	$(MAKE) _render
+	$(MAKE) check-unit check-markdown check-structured check-docx check-tika
 
 check-unit:
 	PYTHONPATH=scripts mise exec -- uv run python -m unittest discover -s tests -p 'test_*.py'
@@ -39,7 +66,9 @@ check-tika:
 check-urls:
 	mise exec -- uv run python scripts/check_urls.py --resume "$(RESUME)"
 
-check-office: pdf
+check-office:
+	$(MAKE) clean
+	$(MAKE) _render-markdown _render-structured _pdf
 	mise exec -- uv run python scripts/check_office.py --resume "$(RESUME)"
 
 clean:

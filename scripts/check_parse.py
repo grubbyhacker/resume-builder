@@ -148,6 +148,45 @@ def role_heading(company: str, location: str, role: dict) -> str:
     return f"{role['title']}, {company} | {location} | {start} - {end}"
 
 
+def check_markdown_role_headings(text: str, resume: dict) -> list[str]:
+    errors: list[str] = []
+    lines = [line.strip() for line in text.splitlines()]
+    cursor = 0
+
+    for job_index, job in enumerate(resume.get("experience", [])):
+        if not isinstance(job, dict):
+            continue
+        company = job.get("company", "<unknown company>")
+        location = job.get("location", "<unknown location>")
+        legacy_heading = f"### {company} - {location}"
+        if legacy_heading in lines:
+            errors.append(
+                f"experience[{job_index}] uses a shared employer heading; every role must repeat employer metadata"
+            )
+
+        for role_index, role in enumerate(job.get("roles", [])):
+            if not isinstance(role, dict):
+                continue
+            try:
+                expected = f"### {role_heading(str(company), str(location), role)}"
+            except KeyError as exc:
+                errors.append(
+                    f"experience[{job_index}].roles[{role_index}] is missing key needed for Markdown heading: {exc}"
+                )
+                continue
+            try:
+                found = lines.index(expected, cursor)
+            except ValueError:
+                errors.append(
+                    f"complete Markdown role heading missing for experience[{job_index}].roles[{role_index}]: "
+                    f"{expected!r}"
+                )
+                continue
+            cursor = found + 1
+
+    return errors
+
+
 def check_yaml_content_present(text: str, resume: dict, *, display_dates: bool = True) -> list[str]:
     errors: list[str] = []
     for label, expected in expected_resume_strings(resume, display_dates=display_dates):
@@ -274,6 +313,7 @@ def check_ats_text(text: str, expectations: dict, resume: dict) -> list[str]:
     errors.extend(check_order(text, expected_document_order(resume, markdown=True)))
     errors.extend(check_forbidden(text, as_string_list(expectations.get("forbidden"), "forbidden")))
     errors.extend(check_yaml_content_present(text, resume))
+    errors.extend(check_markdown_role_headings(text, resume))
     errors.extend(check_role_boundaries(text, resume))
     errors.extend(check_role_noun_starts(text))
     errors.extend(check_education_degree_fields(text, resume))

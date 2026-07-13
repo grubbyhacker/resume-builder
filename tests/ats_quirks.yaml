@@ -39,8 +39,8 @@ quirks:
     symptom: "A later role under a shared company heading imports with title and dates but no company or location"
     observed_on: ["job-site import, 2026-07 (Google Senior Engineering Manager)"]
     root_cause: "Parser treats each dated role line as a separate work-history entry and does not inherit company/location from the previous heading"
-    workaround: "Repeat company and city/state on every dated role heading: 'Title, Company | City, ST | Dates'"
-    guard: "schema requires non-empty city/state experience.location; check_role_boundaries derives every full role heading from YAML"
+    workaround: "Render every role as a flat entry in ATS Markdown, structured Markdown, and DOCX; repeat company and city/state in every complete role heading"
+    guard: "schema requires non-empty city/state experience.location; Markdown, structured-Markdown, and DOCX heading checks require one exact, ordered, complete heading per role and reject shared employer headings"
 
   - id: first-bullet-demoted-to-lead-sentence
     symptom: "A job's first bullet is imported as the role's intro line, not a bullet"

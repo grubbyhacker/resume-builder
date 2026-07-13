@@ -23,6 +23,7 @@ from check_parse import (
     check_yaml_content_present,
     load_expectations,
     load_resume,
+    role_heading,
 )
 
 
@@ -37,6 +38,42 @@ def read_document_xml(path: Path) -> str:
     with zipfile.ZipFile(path) as archive:
         with archive.open("word/document.xml") as handle:
             return handle.read().decode("utf-8")
+
+
+def check_docx_role_headings(document: Document, resume: dict) -> list[str]:
+    errors: list[str] = []
+    paragraphs = [(paragraph.text.strip(), paragraph.style.name) for paragraph in document.paragraphs]
+    cursor = 0
+
+    for job_index, job in enumerate(resume.get("experience", [])):
+        if not isinstance(job, dict):
+            continue
+        legacy_heading = (f"{job.get('company')} - {job.get('location')}", "Heading 2")
+        if legacy_heading in paragraphs:
+            errors.append(
+                f"experience[{job_index}] uses a shared employer heading; every role must be a flat entry"
+            )
+        for role_index, role in enumerate(job.get("roles", [])):
+            if not isinstance(role, dict):
+                continue
+            try:
+                expected = (role_heading(str(job.get("company")), str(job.get("location")), role), "Heading 3")
+            except KeyError as exc:
+                errors.append(
+                    f"experience[{job_index}].roles[{role_index}] is missing key needed for DOCX heading: {exc}"
+                )
+                continue
+            try:
+                found = paragraphs.index(expected, cursor)
+            except ValueError:
+                errors.append(
+                    f"complete DOCX role heading missing for experience[{job_index}].roles[{role_index}]: "
+                    f"{expected[0]!r}"
+                )
+                continue
+            cursor = found + 1
+
+    return errors
 
 
 def check_docx_structure(path: Path, document: Document) -> list[str]:
@@ -117,6 +154,7 @@ def main() -> int:
         resume = load_resume(args.resume)
         expectations = load_expectations(args.expectations)
         errors = check_docx_structure(docx_path, document)
+        errors.extend(check_docx_role_headings(document, resume))
         errors.extend(check_docx_text(text, expectations, resume))
     except (OSError, ValueError, zipfile.BadZipFile, yaml.YAMLError) as exc:
         print(f"DOCX check error: {exc}", file=sys.stderr)

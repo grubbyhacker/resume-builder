@@ -184,10 +184,11 @@ def add_role_heading(document: Document, title: str, company: str, location: str
         f"{title}, {company} | {location} | {display_start} - {display_end}",
         "Heading 3",
     )
+    paragraph.paragraph_format.space_before = Pt(9)
     keep_with_next(paragraph)
 
 
-def add_bullet(document: Document, text: str) -> None:
+def add_bullet(document: Document, text: str):
     paragraph = document.add_paragraph()
     paragraph.paragraph_format.left_indent = Inches(0.25)
     paragraph.paragraph_format.first_line_indent = Inches(-0.15)
@@ -197,6 +198,7 @@ def add_bullet(document: Document, text: str) -> None:
     set_run_font(bullet)
     run = paragraph.add_run(text)
     set_run_font(run)
+    return paragraph
 
 
 def add_skill_bullet(document: Document, text: str) -> None:
@@ -249,18 +251,16 @@ def add_projects(document: Document, projects: list[dict]) -> None:
 def add_experience(document: Document, experience: list[dict]) -> None:
     add_section_heading(document, "Professional Experience")
     for job in experience:
-        company_text = job["company"]
-        if job.get("location"):
-            company_text = f"{company_text} - {job['location']}"
-        company = add_paragraph(document, company_text, "Heading 2")
-        keep_with_next(company)
         for role in job["roles"]:
             add_role_heading(document, role["title"], job["company"], job["location"], role["start"], role["end"])
             if role.get("description"):
                 description = add_paragraph(document, role["description"])
                 set_paragraph_spacing(description, after=3, line=1.05)
-            for bullet in role.get("bullets", []):
-                add_bullet(document, bullet)
+            bullets = role.get("bullets", [])
+            for bullet_index, bullet in enumerate(bullets):
+                paragraph = add_bullet(document, bullet)
+                if bullet_index == len(bullets) - 2:
+                    keep_with_next(paragraph)
 
 
 def education_line(item: dict) -> str:

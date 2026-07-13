@@ -22,6 +22,13 @@ def write_list(lines: list[str], title: str, items: list[str]) -> None:
     lines.append("")
 
 
+def structured_role_heading(job: dict, role: dict) -> str:
+    return (
+        f"{role['title']}, {job['company']} | {job['location']} | "
+        f"{role['start']} - {role['end']}"
+    )
+
+
 def render_structured(resume: dict) -> str:
     profile = resume["profile"]
     lines: list[str] = [f"# Resume Source: {profile['name']}", ""]
@@ -59,13 +66,8 @@ def render_structured(resume: dict) -> str:
 
     lines.extend(["## Experience", ""])
     for job in resume["experience"]:
-        heading = job["company"]
-        if job.get("location"):
-            heading = f"{heading} - {job['location']}"
-        lines.append(f"### {heading}")
-        lines.append("")
         for role in job["roles"]:
-            lines.append(f"#### {role['title']}")
+            lines.append(f"### {structured_role_heading(job, role)}")
             lines.append("")
             lines.append(f"- Company: {job['company']}")
             lines.append(f"- Location: {job['location']}")
