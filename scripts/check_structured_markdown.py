@@ -9,6 +9,43 @@ import yaml
 
 from build_metadata import default_artifact_path
 from check_parse import check_yaml_content_present, load_resume
+from render_structured_markdown import structured_role_heading
+
+
+def check_structured_role_headings(text: str, resume: dict) -> list[str]:
+    errors: list[str] = []
+    lines = [line.strip() for line in text.splitlines()]
+    cursor = 0
+
+    for job_index, job in enumerate(resume.get("experience", [])):
+        if not isinstance(job, dict):
+            continue
+        legacy_heading = f"### {job.get('company')} - {job.get('location')}"
+        if legacy_heading in lines:
+            errors.append(
+                f"experience[{job_index}] uses a shared employer heading; every role must be a flat entry"
+            )
+        for role_index, role in enumerate(job.get("roles", [])):
+            if not isinstance(role, dict):
+                continue
+            try:
+                expected = f"### {structured_role_heading(job, role)}"
+            except KeyError as exc:
+                errors.append(
+                    f"experience[{job_index}].roles[{role_index}] is missing key needed for heading: {exc}"
+                )
+                continue
+            try:
+                found = lines.index(expected, cursor)
+            except ValueError:
+                errors.append(
+                    f"complete structured Markdown role heading missing for "
+                    f"experience[{job_index}].roles[{role_index}]: {expected!r}"
+                )
+                continue
+            cursor = found + 1
+
+    return errors
 
 
 def main() -> int:
@@ -23,6 +60,7 @@ def main() -> int:
         resume = load_resume(args.resume)
         errors = []
         errors.extend(check_yaml_content_present(text, resume, display_dates=False))
+        errors.extend(check_structured_role_headings(text, resume))
     except (OSError, ValueError, yaml.YAMLError) as exc:
         print(f"Structured Markdown check error: {exc}", file=sys.stderr)
         return 1

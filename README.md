@@ -227,7 +227,7 @@ Skills and Projects appear before Professional Experience because some importers
 
 ### Structured Markdown Checks
 
-`scripts/check_structured_markdown.py` verifies that every significant string in the YAML source appears in the structured projection. Its purpose is losslessness: a field added to the source should not silently disappear from the agent-readable artifact.
+`scripts/check_structured_markdown.py` verifies that every significant string in the YAML source appears in the structured projection. Its purpose is losslessness: a field added to the source should not silently disappear from the agent-readable artifact. Experience is a flat list in which every role heading repeats title, employer, location, and raw source dates; the checker rejects shared employer headings and incomplete or misordered role headings.
 
 ### DOCX Checks
 
@@ -250,6 +250,8 @@ It also requires:
 - at least one literal bullet
 - the exact `•\t` bullet prefix
 - a bottom border on every standard section heading
+- a flat Professional Experience list with one complete Heading 3 paragraph per role
+- title, employer, location, and dates repeated in every role heading, with no shared employer Heading 2 paragraphs
 
 The extracted DOCX text is then subjected to the same required-text, forbidden-text, ordering, source-losslessness, role-boundary, title-noun, and education checks used for Markdown.
 
