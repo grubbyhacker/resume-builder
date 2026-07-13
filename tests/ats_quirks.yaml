@@ -35,12 +35,19 @@ quirks:
     workaround: "Model each title as its own role/entry with its own dates and bullets (schema already supports roles[])"
     guard: "check_role_boundaries: every role's bullets fall within that role's block"
 
+  - id: shared-company-heading-detaches-later-role
+    symptom: "A later role under a shared company heading imports with title and dates but no company or location"
+    observed_on: ["job-site import, 2026-07 (Google Senior Engineering Manager)"]
+    root_cause: "Parser treats each dated role line as a separate work-history entry and does not inherit company/location from the previous heading"
+    workaround: "Repeat company and city/state on every dated role heading: 'Title, Company | City, ST | Dates'"
+    guard: "schema requires non-empty city/state experience.location; check_role_boundaries derives every full role heading from YAML"
+
   - id: first-bullet-demoted-to-lead-sentence
     symptom: "A job's first bullet is imported as the role's intro line, not a bullet"
     observed_on: ["workday-style form, 2026-07 (Microsoft)"]
     root_cause: "Parser promotes the first line of a role to the description when there's no intro paragraph"
-    workaround: "For short entries, use a single description paragraph instead of a bullet list"
-    guard: "registry note only; not auto-enforced"
+    workaround: "Every role with bullets must begin with a distinct description paragraph"
+    guard: "schema: roles containing bullets must also contain a non-empty description"
 
   - id: degree-field-not-detected
     symptom: "Field of study not extracted into the education form field"

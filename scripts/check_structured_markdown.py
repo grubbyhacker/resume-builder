@@ -22,7 +22,7 @@ def main() -> int:
         text = markdown_path.read_text(encoding="utf-8")
         resume = load_resume(args.resume)
         errors = []
-        errors.extend(check_yaml_content_present(text, resume))
+        errors.extend(check_yaml_content_present(text, resume, display_dates=False))
     except (OSError, ValueError, yaml.YAMLError) as exc:
         print(f"Structured Markdown check error: {exc}", file=sys.stderr)
         return 1

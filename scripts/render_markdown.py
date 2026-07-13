@@ -9,6 +9,7 @@ import yaml
 from jinja2 import Environment, FileSystemLoader, StrictUndefined, TemplateError, select_autoescape
 
 from build_metadata import build_date, named_artifact_path
+from date_utils import format_resume_date
 
 
 def load_resume(path: Path) -> dict:
@@ -31,6 +32,7 @@ def render(resume_path: Path, template_path: Path, output_path: Path | None, dat
         lstrip_blocks=True,
         autoescape=select_autoescape(disabled_extensions=("j2", "md")),
     )
+    environment.filters["display_date"] = format_resume_date
     template = environment.get_template(template_path.name)
     rendered = template.render(**resume).rstrip() + "\n"
 

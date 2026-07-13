@@ -9,6 +9,7 @@ from pathlib import Path
 import yaml
 
 from build_metadata import default_artifact_path
+from date_utils import format_resume_date
 
 
 EMAIL_RE = re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b")
@@ -67,7 +68,7 @@ def append_string(value: object, label: str, strings: list[tuple[str, str]]) -> 
         strings.append((label, value))
 
 
-def expected_resume_strings(resume: dict) -> list[tuple[str, str]]:
+def expected_resume_strings(resume: dict, *, display_dates: bool = True) -> list[tuple[str, str]]:
     strings: list[tuple[str, str]] = []
     profile = resume.get("profile", {})
     if isinstance(profile, dict):
@@ -107,9 +108,17 @@ def expected_resume_strings(resume: dict) -> list[tuple[str, str]]:
             for role_index, role in enumerate(roles):
                 if not isinstance(role, dict):
                     continue
-                for key in ("title", "start", "end"):
-                    append_string(role.get(key), f"experience[{job_index}].roles[{role_index}].{key}", strings)
-                append_string(role.get("description"), f"experience[{job_index}].roles[{role_index}].description", strings)
+                append_string(role.get("title"), f"experience[{job_index}].roles[{role_index}].title", strings)
+                for key in ("start", "end"):
+                    value = role.get(key)
+                    if display_dates and isinstance(value, str):
+                        value = format_resume_date(value)
+                    append_string(value, f"experience[{job_index}].roles[{role_index}].{key}", strings)
+                append_string(
+                    role.get("description"),
+                    f"experience[{job_index}].roles[{role_index}].description",
+                    strings,
+                )
                 bullets = role.get("bullets", [])
                 if isinstance(bullets, list):
                     for bullet_index, bullet in enumerate(bullets):
@@ -125,26 +134,40 @@ def expected_resume_strings(resume: dict) -> list[tuple[str, str]]:
             if not isinstance(item, dict):
                 continue
             for key in ("institution", "location", "degree", "field", "start", "end"):
-                append_string(item.get(key), f"education[{education_index}].{key}", strings)
+                value = item.get(key)
+                if display_dates and key in {"start", "end"} and isinstance(value, str):
+                    value = format_resume_date(value)
+                append_string(value, f"education[{education_index}].{key}", strings)
 
     return strings
 
 
-def role_heading(role: dict) -> str:
-    return f"{role['title']} | {role['start']} - {role['end']}"
+def role_heading(company: str, location: str, role: dict) -> str:
+    start = format_resume_date(role["start"])
+    end = format_resume_date(role["end"])
+    return f"{role['title']}, {company} | {location} | {start} - {end}"
 
 
-def check_yaml_content_present(text: str, resume: dict) -> list[str]:
+def check_yaml_content_present(text: str, resume: dict, *, display_dates: bool = True) -> list[str]:
     errors: list[str] = []
-    for label, expected in expected_resume_strings(resume):
+    for label, expected in expected_resume_strings(resume, display_dates=display_dates):
         if expected not in text:
             errors.append(f"YAML content missing from output ({label}): {expected!r}")
     return errors
 
 
+def expected_document_order(resume: dict, *, markdown: bool) -> list[str]:
+    prefix = "## " if markdown else ""
+    order = [resume["profile"]["name"], resume["headline"], f"{prefix}Summary", f"{prefix}Skills"]
+    if resume.get("projects"):
+        order.append(f"{prefix}Projects")
+    order.extend((f"{prefix}Professional Experience", f"{prefix}Education"))
+    return order
+
+
 def check_role_boundaries(text: str, resume: dict) -> list[str]:
     errors: list[str] = []
-    roles: list[tuple[str, dict]] = []
+    roles: list[tuple[str, str, dict]] = []
 
     experience = resume.get("experience", [])
     if not isinstance(experience, list):
@@ -154,26 +177,28 @@ def check_role_boundaries(text: str, resume: dict) -> list[str]:
         if not isinstance(job, dict):
             continue
         company = job.get("company", "<unknown company>")
+        location = job.get("location", "<unknown location>")
         job_roles = job.get("roles", [])
         if not isinstance(job_roles, list):
             continue
         for role in job_roles:
             if isinstance(role, dict):
-                roles.append((str(company), role))
+                roles.append((str(company), str(location), role))
 
     role_offsets: list[tuple[str, dict, int]] = []
     cursor = 0
-    for company, role in roles:
+    for company, location, role in roles:
+        company_location = f"{company} / {location}"
         try:
-            heading = role_heading(role)
+            heading = role_heading(company, location, role)
         except KeyError as exc:
-            errors.append(f"role under {company} is missing key needed for heading: {exc}")
+            errors.append(f"role under {company_location} is missing key needed for heading: {exc}")
             continue
         found = text.find(heading, cursor)
         if found == -1:
-            errors.append(f"role heading not found in expected order under {company}: {heading!r}")
+            errors.append(f"role heading not found in expected order under {company_location}: {heading!r}")
             continue
-        role_offsets.append((company, role, found))
+        role_offsets.append((company_location, role, found))
         cursor = found + len(heading)
 
     for index, (company, role, start) in enumerate(role_offsets):
@@ -246,6 +271,7 @@ def check_ats_text(text: str, expectations: dict, resume: dict) -> list[str]:
     errors: list[str] = []
     errors.extend(check_required_exact(text, as_string_list(expectations.get("required_exact"), "required_exact")))
     errors.extend(check_order(text, as_string_list(expectations.get("required_order"), "required_order")))
+    errors.extend(check_order(text, expected_document_order(resume, markdown=True)))
     errors.extend(check_forbidden(text, as_string_list(expectations.get("forbidden"), "forbidden")))
     errors.extend(check_yaml_content_present(text, resume))
     errors.extend(check_role_boundaries(text, resume))

@@ -15,6 +15,7 @@ from docx.oxml.ns import qn
 from docx.shared import Inches, Pt, RGBColor
 
 from build_metadata import build_date, build_identifier, build_sha, named_artifact_path
+from date_utils import format_resume_date
 
 
 BODY_FONT = "Arial"
@@ -175,8 +176,14 @@ def add_section_heading(document: Document, text: str) -> None:
     add_bottom_border(paragraph)
 
 
-def add_role_heading(document: Document, title: str, start: str, end: str) -> None:
-    paragraph = add_paragraph(document, f"{title} | {start} - {end}", "Heading 3")
+def add_role_heading(document: Document, title: str, company: str, location: str, start: str, end: str) -> None:
+    display_start = format_resume_date(start)
+    display_end = format_resume_date(end)
+    paragraph = add_paragraph(
+        document,
+        f"{title}, {company} | {location} | {display_start} - {display_end}",
+        "Heading 3",
+    )
     keep_with_next(paragraph)
 
 
@@ -248,7 +255,7 @@ def add_experience(document: Document, experience: list[dict]) -> None:
         company = add_paragraph(document, company_text, "Heading 2")
         keep_with_next(company)
         for role in job["roles"]:
-            add_role_heading(document, role["title"], role["start"], role["end"])
+            add_role_heading(document, role["title"], job["company"], job["location"], role["start"], role["end"])
             if role.get("description"):
                 description = add_paragraph(document, role["description"])
                 set_paragraph_spacing(description, after=3, line=1.05)
@@ -261,7 +268,9 @@ def education_line(item: dict) -> str:
     if item.get("field"):
         degree = f"{degree} in {item['field']}"
     if item.get("start") or item.get("end"):
-        return f"{degree} | {item.get('start', '')} - {item.get('end', '')}".strip()
+        start = format_resume_date(item["start"]) if item.get("start") else ""
+        end = format_resume_date(item["end"]) if item.get("end") else ""
+        return f"{degree} | {start} - {end}".strip()
     return degree
 
 

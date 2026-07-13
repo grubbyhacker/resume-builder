@@ -30,7 +30,7 @@
 ### {{ job.company }}{% if job.location %} - {{ job.location }}{% endif %}
 
 {% for role in job.roles %}
-{{ role.title }} | {{ role.start }} - {{ role.end }}
+{{ role.title }}, {{ job.company }} | {{ job.location }} | {{ role.start | display_date }} - {{ role.end | display_date }}
 {% if role.description is defined %}
 {{ role.description }}
 {% endif %}
@@ -45,6 +45,6 @@
 ## Education
 {% for item in education %}
 ### {{ item.institution }} - {{ item.location }}
-{{ item.degree }}{% if item.field is defined %} in {{ item.field }}{% endif %}{% if item.start is defined or item.end is defined %} | {{ item.start | default("") }}{% if item.end is defined %} - {{ item.end }}{% endif %}{% endif %}
+{{ item.degree }}{% if item.field is defined %} in {{ item.field }}{% endif %}{% if item.start is defined or item.end is defined %} | {% if item.start is defined %}{{ item.start | display_date }}{% endif %}{% if item.end is defined %} - {{ item.end | display_date }}{% endif %}{% endif %}
 
 {% endfor %}

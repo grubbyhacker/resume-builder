@@ -67,6 +67,8 @@ def render_structured(resume: dict) -> str:
         for role in job["roles"]:
             lines.append(f"#### {role['title']}")
             lines.append("")
+            lines.append(f"- Company: {job['company']}")
+            lines.append(f"- Location: {job['location']}")
             lines.append(f"- Start: {role['start']}")
             lines.append(f"- End: {role['end']}")
             if role.get("description"):
