@@ -168,7 +168,7 @@ Inside the container it runs:
 make check-office
 ```
 
-The Office check renders the named DOCX artifact through LibreOffice, inspects the resulting PDF with Poppler, checks extracted PDF text against `resume.yaml`, checks page count, and writes page render artifacts to `output/office-render/`.
+The Office check renders the named DOCX artifact through LibreOffice, inspects the resulting PDF with Poppler, checks extracted PDF text against `resume.yaml`, checks page count, and writes page render artifacts to an artifact-specific directory under `output/office-render/`. It thresholds an inverted grayscale copy of each page to find the visible-ink bounds and fails if content touches a page edge or enters the bottom safety zone; the saved PNG remains unmodified for visual review.
 
 You can also run `make check-office` directly inside a dev container or CI environment that already has LibreOffice and Poppler.
 
