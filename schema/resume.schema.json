@@ -53,10 +53,14 @@
     "experience": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["company", "roles"],
+      "required": ["company", "location", "roles"],
       "properties": {
         "company": { "type": "string", "minLength": 1 },
-        "location": { "type": "string" },
+        "location": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[A-Za-z][A-Za-z .'-]+, [A-Z]{2}$"
+        },
         "roles": {
           "type": "array",
           "minItems": 1,
@@ -82,10 +86,16 @@
         { "required": ["description"] },
         { "required": ["bullets"] }
       ],
+      "allOf": [
+        {
+          "if": { "required": ["bullets"] },
+          "then": { "required": ["description"] }
+        }
+      ],
       "properties": {
         "title": { "type": "string", "minLength": 1 },
-        "start": { "type": "string", "minLength": 1 },
-        "end": { "type": "string", "minLength": 1 },
+        "start": { "$ref": "#/$defs/monthDate" },
+        "end": { "$ref": "#/$defs/endDate" },
         "description": { "type": "string", "minLength": 1 },
         "bullets": {
           "type": "array",
@@ -97,15 +107,27 @@
     "education": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["institution", "location", "degree"],
+      "required": ["institution", "location", "degree", "start"],
       "properties": {
         "institution": { "type": "string", "minLength": 1 },
         "location": { "type": "string", "minLength": 1 },
         "degree": { "type": "string", "minLength": 1 },
         "field": { "type": "string", "minLength": 1 },
-        "start": { "type": "string", "minLength": 1 },
-        "end": { "type": "string", "minLength": 1 }
+        "start": { "$ref": "#/$defs/educationDate" },
+        "end": { "$ref": "#/$defs/educationDate" }
       }
+    },
+    "monthDate": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])$"
+    },
+    "endDate": {
+      "type": "string",
+      "pattern": "^([0-9]{4}-(0[1-9]|1[0-2])|present)$"
+    },
+    "educationDate": {
+      "type": "string",
+      "pattern": "^[0-9]{4}(-((0[1-9])|(1[0-2])))?$"
     }
   }
 }

@@ -18,6 +18,7 @@ from check_parse import (
     check_required_exact,
     check_role_boundaries,
     check_education_degree_fields,
+    expected_document_order,
     check_role_noun_starts,
     check_yaml_content_present,
     load_expectations,
@@ -93,6 +94,7 @@ def check_docx_text(text: str, expectations: dict, resume: dict) -> list[str]:
     errors: list[str] = []
     errors.extend(check_required_exact(text, as_string_list(expectations.get("docx_required_exact"), "docx_required_exact")))
     errors.extend(check_order(text, as_string_list(expectations.get("docx_required_order"), "docx_required_order")))
+    errors.extend(check_order(text, expected_document_order(resume, markdown=False)))
     errors.extend(check_forbidden(text, as_string_list(expectations.get("docx_forbidden"), "docx_forbidden")))
     errors.extend(check_yaml_content_present(text, resume))
     errors.extend(check_role_boundaries(text, resume))
