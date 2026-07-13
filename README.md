@@ -206,7 +206,8 @@ This validates the YAML, renders Markdown, structured Markdown, and DOCX, runs t
 - required document and section order
 - absence of forbidden placeholders, punctuation, and headings
 - survival of every meaningful YAML string
-- ordered role headings
+- one complete, ordered level-three heading per role containing its title, employer, location, and dates
+- absence of shared employer headings that make later roles look like continuations
 - descriptions and bullets remaining inside the correct role block
 - descriptions preceding their role's bullets
 - bullets remaining in YAML order
@@ -431,6 +432,8 @@ The repository also includes a development container with LibreOffice, Poppler, 
 
 ## Common Commands
 
+Every artifact-producing command below removes `output/` before building. Aggregate commands clean once and then generate all of their artifacts into the empty directory, so files from older canonical, tailored, or scratch builds cannot be mistaken for current review evidence.
+
 Render Markdown, structured Markdown, and DOCX:
 
 ```sh
@@ -455,13 +458,15 @@ Run the complete LibreOffice, Poppler, PNG, and visual-review path:
 mise run check-office-docker
 ```
 
+This produces one clean, complete review set: ATS Markdown, structured Markdown, DOCX, PDF, extracted PDF text, and page PNGs. It does not retain artifacts from earlier variants or builds.
+
 Build with a fixed date:
 
 ```sh
 RESUME_BUILD_DATE=20260708 make pdf
 ```
 
-Remove generated output:
+Remove generated output without starting another build:
 
 ```sh
 make clean

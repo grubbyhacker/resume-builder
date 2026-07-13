@@ -27,10 +27,8 @@
 {% endif %}
 ## Professional Experience
 {% for job in experience %}
-### {{ job.company }}{% if job.location %} - {{ job.location }}{% endif %}
-
 {% for role in job.roles %}
-{{ role.title }}, {{ job.company }} | {{ job.location }} | {{ role.start | display_date }} - {{ role.end | display_date }}
+### {{ role.title }}, {{ job.company }} | {{ job.location }} | {{ role.start | display_date }} - {{ role.end | display_date }}
 {% if role.description is defined %}
 {{ role.description }}
 {% endif %}
