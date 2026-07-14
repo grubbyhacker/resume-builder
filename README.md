@@ -37,14 +37,14 @@ The design follows a few simple principles:
 
 ## What It Builds
 
-`resume.yaml` is the default source. A normal build produces:
+`resume.yaml` is the default source. A complete review or release build produces:
 
 - `output/First_Last_YYYYMMDD.md`: plain ATS Markdown.
 - `output/First_Last_YYYYMMDD.structured.md`: an agent-readable, structure-preserving projection.
 - `output/First_Last_YYYYMMDD.docx`: the upload-ready Word document.
 - `output/First_Last_YYYYMMDD.pdf`: the PDF generated from that DOCX by LibreOffice.
 
-The UTC date can be overridden with `RESUME_BUILD_DATE=YYYYMMDD` for reproducible builds. Release builds also include the short Git commit SHA in the release tag and stamp build metadata into the DOCX core properties.
+The UTC build date used in artifact names can be overridden with `RESUME_BUILD_DATE=YYYYMMDD` for stable naming. Release builds also include the short Git commit SHA in the release tag and stamp build metadata into the DOCX core properties.
 
 Generated artifacts live under `output/` and are ignored by Git. The files distributed in a GitHub Release are produced by the same build path used locally and in CI; there is no separately maintained release copy.
 
@@ -72,7 +72,7 @@ Pandoc and WeasyPrint are not used. The DOCX is generated directly from YAML wit
 
 ## Source Model and Validation
 
-The editable source is `resume.yaml`. Its main sections are:
+The editable source is `resume.yaml`. Its top-level sections are:
 
 - `profile`
 - `headline`
@@ -82,11 +82,13 @@ The editable source is `resume.yaml`. Its main sections are:
 - `experience`
 - `education`
 
-Experience roles may contain a description alone or a description followed by bullets. Descriptions render as prose paragraphs; bullets render as distinct achievements. A role with bullets must have a description so an importer cannot silently promote the first achievement into unlabeled introductory prose.
+The source groups roles under employers so shared company and location data is stored once. Rendered artifacts deliberately flatten that hierarchy: every role repeats the employer and location so it can stand alone when parsed.
+
+Every role has a prose description and may also have achievement bullets. Keeping the description distinct prevents an importer from silently promoting the first achievement into unlabeled introductory prose.
 
 Experience dates use canonical `YYYY-MM` values, with `present` reserved for a current role. Education dates may use `YYYY` or `YYYY-MM`. Renderers convert these machine-readable values into familiar text such as `Dec 2024` and `Present`.
 
-Before any artifact is rendered, `scripts/validate_yaml.py` loads the YAML with `PyYAML` and validates it against the Draft 2020-12 schema in `schema/resume.schema.json`. The schema:
+The documented build targets run `scripts/validate_yaml.py` before rendering. The script parses the YAML with `PyYAML` and validates the resulting data against `schema/resume.schema.json` using the JSON Schema Draft 2020-12 standard. The schema:
 
 - rejects unknown properties at the root and within modeled objects
 - requires the core sections and profile fields
@@ -96,11 +98,8 @@ Before any artifact is rendered, `scripts/validate_yaml.py` loads the YAML with 
 - requires a city/state-style location for every employer
 - requires every role to have a title, canonical dates, and a description
 - requires roles with bullets to begin with a distinct description
-- rejects start dates later than end dates
-- requires roles, employers, and education records to be reverse chronological
-- preserves project and education fields as separate structured values
 
-Date ordering and range checks are semantic validation performed after the JSON Schema passes. Cross-employer date overlaps are intentionally allowed because concurrent roles can be legitimate. Validation errors include the failing path so content-model mistakes fail early instead of surfacing as malformed binaries.
+After the schema passes, custom semantic checks reject start dates later than end dates and require roles, employers, and education records to be reverse chronological. Cross-employer date overlaps remain valid because concurrent roles can be legitimate. Validation errors include the failing path so content-model mistakes fail early instead of surfacing as malformed binaries.
 
 ## Transformations
 
@@ -127,8 +126,8 @@ The Markdown artifact is both distributable output and the simplest representati
 - profile values have labels
 - websites and bullets remain nested lists
 - projects retain separate name, URL, and description fields
-- employers contain nested roles
-- company, location, dates, description, and bullets remain distinct
+- experience is a flat list of roles, each repeating its title, company, location, and source dates
+- role descriptions and bullets remain explicitly labeled and distinct
 - education retains separate institution, location, degree, field, and date values
 
 This artifact makes the YAML easier to consume without forcing another tool to infer structure from the upload-oriented document.
@@ -147,7 +146,9 @@ The renderer applies:
 - standard Word heading styles with restrained spacing
 - blue section headings with paragraph borders
 - keep-with-next behavior on headings where practical
+- enough spacing to distinguish adjacent roles without shared employer headings
 - separately formatted role descriptions and achievement bullets
+- keep-with-next behavior on the final two bullets of a role to avoid a lone bullet at a page boundary
 - distinct institution and degree/field lines
 - `en-US` document language metadata
 - build date and optional commit SHA in core properties
@@ -180,8 +181,8 @@ The checks are layered so that each representation is tested at the level where 
 | --- | --- |
 | YAML | Schema, formats, required fields, unknown fields |
 | ATS Markdown | Required and forbidden text, order, syntax, role boundaries, source losslessness |
-| Structured Markdown | Source losslessness |
-| DOCX object model | Tables, shapes, styles, literal bullets, standard headings |
+| Structured Markdown | Source losslessness, complete flat role headings |
+| DOCX object model | Tables, shapes, styles, literal bullets, standard and role headings |
 | DOCX XML | Drawings, text boxes, tables, numbering properties |
 | Tika extraction | Independent text survival and role attribution |
 | PDF text | Required content, order, forbidden content, numbered-bullet regression |
@@ -202,8 +203,7 @@ This validates the YAML, renders Markdown, structured Markdown, and DOCX, runs t
 
 `scripts/check_parse.py` combines stable policy expectations from `tests/expected/ats_text_expectations.yaml` with content and ordering checks derived from the current YAML source. Names, contact data, headlines, employers, role headings, dates, and education values do not need to be manually copied into the expectations file. It verifies:
 
-- required exact strings
-- required document and section order
+- any exact strings or ordering rules configured in the expectations file
 - absence of forbidden placeholders, punctuation, and headings
 - survival of every meaningful YAML string
 - one complete, ordered level-three heading per role containing its title, employer, location, and dates
@@ -267,14 +267,17 @@ If Docker is not installed locally, the Tika wrapper reports a skip. CI is expec
 
 ### Unit Tests
 
-The standard-library `unittest` suite covers date semantics, role-schema policy, and PNG analysis:
+The standard-library `unittest` suite covers date semantics, role structure, and PNG analysis:
 
 - canonical date parsing and human-readable formatting
 - start/end consistency and reverse-chronological ordering
 - the requirement that roles with bullets also have descriptions
+- complete flat role headings in ATS Markdown, structured Markdown, and DOCX
+- rejection of shared employer headings and incomplete role metadata
+- keep-with-next behavior for the final two bullets in each role
 - grayscale inversion and thresholding produce the expected ink bounds
 - content inside the bottom safety zone fails
-- artifact-specific render directories remove stale pages and legacy generic PNGs
+- artifact-specific render directories remove stale pages
 - sparse final pages produce advisory diagnostics rather than hard failures
 
 Unit tests are run as part of `make check`.
@@ -423,11 +426,15 @@ Generated resume artifacts must be visually reviewed and approved before an arti
 
 ## Setup
 
-Install the pinned toolchain and Python dependencies:
+Install [mise](https://mise.jdx.dev/getting-started.html) and [Docker](https://docs.docker.com/get-started/get-docker/), then review the repository's `mise.toml`. Docker is optional for basic rendering but required for Tika checks and the reproducible Office/PDF path.
+
+Trust the reviewed configuration, install the pinned toolchain, and synchronize the locked Python environment:
 
 ```sh
+# Run this only after reviewing mise.toml.
+mise trust
 mise install
-mise exec -- uv sync
+mise exec -- uv sync --locked
 ```
 
 The repository also includes a development container with LibreOffice, Poppler, and the required fonts.
@@ -442,7 +449,7 @@ Render Markdown, structured Markdown, and DOCX:
 make render
 ```
 
-Render the canonical PDF as well:
+Render only the DOCX and its canonical PDF:
 
 ```sh
 make pdf
@@ -476,7 +483,7 @@ make clean
 
 ## Tailored and Scratch Resumes
 
-One-off variants can be built from ignored YAML files under `resumes/scratch/`:
+One-off variants can be built from ignored YAML files under `resumes/scratch/`. Each artifact-producing command starts from an empty `output/`, so use the command that matches the result you want:
 
 ```sh
 cp resume.yaml resumes/scratch/acme-platform-director.yaml
@@ -484,6 +491,8 @@ make check RESUME=resumes/scratch/acme-platform-director.yaml
 make pdf RESUME=resumes/scratch/acme-platform-director.yaml
 RESUME=resumes/scratch/acme-platform-director.yaml mise run check-office-docker
 ```
+
+The final command produces the complete review set; the first two are narrower validation and rendering paths.
 
 Their artifact names include the source filename as a variant slug:
 
@@ -505,13 +514,17 @@ scripts/render_structured_markdown.py   YAML → structured Markdown
 scripts/render_docx.py                  YAML → DOCX
 scripts/build_pdf.py                    DOCX → PDF
 scripts/check_parse.py                  ATS Markdown regressions
-scripts/check_structured_markdown.py    Structured Markdown losslessness
+scripts/check_structured_markdown.py    Structured Markdown content and role structure
 scripts/check_docx.py                   DOCX structure and text checks
+scripts/check_tika_docker.sh            Pinned Tika container wrapper
 scripts/check_tika.py                   Independent Tika extraction checks
 scripts/check_office.py                 LibreOffice, Poppler, and PNG checks
 scripts/check_urls.py                   Optional network checks
 tests/expected/                         Data-driven output expectations
 tests/ats_quirks.yaml                   ATS failure and workaround registry
+Makefile                                Clean build and check targets
+mise.toml                               Pinned tools and task aliases
+.devcontainer/office-check.Dockerfile   Pinned Office-check image
 .github/workflows/build.yml             CI and release pipeline
 ```
 
