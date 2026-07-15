@@ -43,7 +43,7 @@ experience:
           - Set the enterprise AI coding platform strategy, directing the rollout of Windsurf and Claude to 500+ users, owning enablement, adoption, and vendor management across Anthropic, Windsurf, and GitLab.
           - Built the operating model for enterprise AI tool adoption, covering provisioning, usage reporting, support channels, and security review, establishing the governance framework the org now runs on.
           - Directed the modernization of CI/CD infrastructure, migrating off aging local hardware to a GKE-based, multi-architecture runner platform built for scale.
-          - Absorbed peak build load and increased code churn from AI tooling, and enabled rapid adoption of ARM64 builds for new NVIDIA AI-fleet platforms.
+          - Absorbed peak build load and increased code churn from AI tooling, and enabled rapid adoption of ARM64 builds for new NVIDIA AI fleet platforms.
           - Established repository and platform governance standards across about 400 repositories, driving technical-debt reduction and compliance campaigns through Terraform-managed infrastructure and health tooling.
   - company: Google
     location: Mountain View, CA
