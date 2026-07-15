@@ -112,15 +112,54 @@ jobs:
         id: metadata
         run: mise exec -- uv run python scripts/print_build_metadata.py >> "$GITHUB_OUTPUT"
 
-      - name: Create GitHub release
+      - name: Validate local release contract
+        run: >-
+          mise exec -- uv run python .github/scripts/check_release_contract.py
+          --source-sha "${GITHUB_SHA}"
+          --release-tag "${{ steps.metadata.outputs.release_tag }}"
+
+      - name: Create draft GitHub release and upload assets
+        id: draft_release
         uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ steps.metadata.outputs.release_tag }}
+          target_commitish: ${{ github.sha }}
           name: Resume ${{ steps.metadata.outputs.release_tag }}
           generate_release_notes: true
+          draft: true
           fail_on_unmatched_files: true
           files: |
             ${{ steps.metadata.outputs.markdown_asset }}
             ${{ steps.metadata.outputs.structured_markdown_asset }}
             ${{ steps.metadata.outputs.docx_asset }}
             ${{ steps.metadata.outputs.pdf_asset }}
+
+      - name: Verify draft release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_ID: ${{ steps.draft_release.outputs.id }}
+        run: |
+          set -euo pipefail
+          gh api "repos/${GITHUB_REPOSITORY}/releases/${RELEASE_ID}" > "${RUNNER_TEMP}/resume-release-draft.json"
+          mise exec -- uv run python .github/scripts/check_release_contract.py \
+            --source-sha "${GITHUB_SHA}" \
+            --release-tag "${{ steps.metadata.outputs.release_tag }}" \
+            --release-json "${RUNNER_TEMP}/resume-release-draft.json" \
+            --expected-draft true
+
+      - name: Publish verified GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_ID: ${{ steps.draft_release.outputs.id }}
+        run: |
+          set -euo pipefail
+          gh api \
+            --method PATCH \
+            "repos/${GITHUB_REPOSITORY}/releases/${RELEASE_ID}" \
+            -F draft=false \
+            > "${RUNNER_TEMP}/resume-release-published.json"
+          mise exec -- uv run python .github/scripts/check_release_contract.py \
+            --source-sha "${GITHUB_SHA}" \
+            --release-tag "${{ steps.metadata.outputs.release_tag }}" \
+            --release-json "${RUNNER_TEMP}/resume-release-published.json" \
+            --expected-draft false
