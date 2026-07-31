@@ -155,6 +155,8 @@ class ReleaseContractTests(unittest.TestCase):
         self.assertIn("if: needs.artifact-changes.outputs.should_render == 'true'", workflow)
         self.assertIn("needs.artifact-changes.outputs.should_render == 'true'", workflow)
         self.assertIn("RESUME_BUILD_DATE: ${{ needs.artifact-changes.outputs.build_date }}", workflow)
+        self.assertIn("RESUME_BUILD_SHA: ${{ needs.artifact-changes.outputs.build_sha }}", workflow)
+        self.assertIn('echo "build_sha=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"', workflow)
 
     def test_changed_files_remain_outside_release_trigger_paths(self) -> None:
         changed = {
