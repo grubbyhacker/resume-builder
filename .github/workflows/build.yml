@@ -31,6 +31,7 @@ jobs:
     outputs:
       should_render: ${{ steps.changed.outputs.should_render }}
       build_date: ${{ steps.metadata.outputs.build_date }}
+      build_sha: ${{ steps.metadata.outputs.build_sha }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
@@ -69,7 +70,9 @@ jobs:
 
       - name: Set build metadata
         id: metadata
-        run: echo "build_date=$(date -u +%Y%m%d)" >> "$GITHUB_OUTPUT"
+        run: |
+          echo "build_date=$(date -u +%Y%m%d)" >> "$GITHUB_OUTPUT"
+          echo "build_sha=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
 
   office-render:
     needs: artifact-changes
@@ -77,7 +80,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       RESUME_BUILD_DATE: ${{ needs.artifact-changes.outputs.build_date }}
-      RESUME_BUILD_SHA: ${{ github.sha }}
+      RESUME_BUILD_SHA: ${{ needs.artifact-changes.outputs.build_sha }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
@@ -117,7 +120,7 @@ jobs:
       contents: write
     env:
       RESUME_BUILD_DATE: ${{ needs.artifact-changes.outputs.build_date }}
-      RESUME_BUILD_SHA: ${{ github.sha }}
+      RESUME_BUILD_SHA: ${{ needs.artifact-changes.outputs.build_sha }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
