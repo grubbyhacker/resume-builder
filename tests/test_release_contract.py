@@ -135,6 +135,14 @@ class ReleaseContractTests(unittest.TestCase):
         self.assertLess(verify, publish)
         self.assertIn("-F draft=false", workflow[publish:])
 
+    def test_workflow_dispatch_requests_a_release_from_main(self) -> None:
+        workflow = (ROOT / ".github" / "workflows" / "build.yml").read_text(encoding="utf-8")
+
+        self.assertIn("workflow_dispatch:", workflow)
+        self.assertIn("github.event_name == 'workflow_dispatch'", workflow)
+        self.assertIn('if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]', workflow)
+        self.assertIn('echo "should_release=true" >> "$GITHUB_OUTPUT"', workflow)
+
     def test_changed_files_remain_outside_release_trigger_paths(self) -> None:
         changed = {
             ".github/workflows/build.yml",
