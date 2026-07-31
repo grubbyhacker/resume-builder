@@ -126,13 +126,16 @@ jobs:
           --release-tag "${{ steps.metadata.outputs.release_tag }}"
 
       - name: Create stable public release assets
+        id: stable_assets
         run: |
           set -euo pipefail
-          mkdir -p output/release-assets
-          cp "${{ steps.metadata.outputs.markdown_asset }}" output/release-assets/resume.md
-          cp "${{ steps.metadata.outputs.structured_markdown_asset }}" output/release-assets/resume.structured.md
-          cp "${{ steps.metadata.outputs.docx_asset }}" output/release-assets/resume.docx
-          cp "${{ steps.metadata.outputs.pdf_asset }}" output/release-assets/resume.pdf
+          stable_assets_dir="${RUNNER_TEMP}/resume-release-assets"
+          mkdir -p "${stable_assets_dir}"
+          cp "${{ steps.metadata.outputs.markdown_asset }}" "${stable_assets_dir}/resume.md"
+          cp "${{ steps.metadata.outputs.structured_markdown_asset }}" "${stable_assets_dir}/resume.structured.md"
+          cp "${{ steps.metadata.outputs.docx_asset }}" "${stable_assets_dir}/resume.docx"
+          cp "${{ steps.metadata.outputs.pdf_asset }}" "${stable_assets_dir}/resume.pdf"
+          echo "directory=${stable_assets_dir}" >> "$GITHUB_OUTPUT"
 
       - name: Create draft GitHub release and upload assets
         id: draft_release
@@ -149,10 +152,10 @@ jobs:
             ${{ steps.metadata.outputs.structured_markdown_asset }}
             ${{ steps.metadata.outputs.docx_asset }}
             ${{ steps.metadata.outputs.pdf_asset }}
-            output/release-assets/resume.md
-            output/release-assets/resume.structured.md
-            output/release-assets/resume.docx
-            output/release-assets/resume.pdf
+            ${{ steps.stable_assets.outputs.directory }}/resume.md
+            ${{ steps.stable_assets.outputs.directory }}/resume.structured.md
+            ${{ steps.stable_assets.outputs.directory }}/resume.docx
+            ${{ steps.stable_assets.outputs.directory }}/resume.pdf
 
       - name: Verify draft release assets
         env:

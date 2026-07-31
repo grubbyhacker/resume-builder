@@ -130,7 +130,8 @@ class ReleaseContractTests(unittest.TestCase):
 
         self.assertIn("target_commitish: ${{ github.sha }}", workflow)
         self.assertIn("Create stable public release assets", workflow)
-        self.assertIn("output/release-assets/resume.pdf", workflow)
+        self.assertIn('stable_assets_dir="${RUNNER_TEMP}/resume-release-assets"', workflow)
+        self.assertIn("${{ steps.stable_assets.outputs.directory }}/resume.pdf", workflow)
         self.assertLess(draft, verify)
         self.assertLess(verify, publish)
         self.assertIn("-F draft=false", workflow[publish:])
