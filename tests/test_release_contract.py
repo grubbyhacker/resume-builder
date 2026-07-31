@@ -130,18 +130,27 @@ class ReleaseContractTests(unittest.TestCase):
 
         self.assertIn("target_commitish: ${{ github.sha }}", workflow)
         self.assertIn("Create stable public release assets", workflow)
-        self.assertIn("output/release-assets/resume.pdf", workflow)
+        self.assertIn('stable_assets_dir="${RUNNER_TEMP}/resume-release-assets"', workflow)
+        self.assertIn("${{ steps.stable_assets.outputs.directory }}/resume.pdf", workflow)
         self.assertLess(draft, verify)
         self.assertLess(verify, publish)
         self.assertIn("-F draft=false", workflow[publish:])
 
-    def test_workflow_dispatch_requests_a_release_from_main(self) -> None:
+    def test_workflow_dispatch_requests_office_rendering_and_release_from_main(self) -> None:
         workflow = (ROOT / ".github" / "workflows" / "build.yml").read_text(encoding="utf-8")
 
         self.assertIn("workflow_dispatch:", workflow)
         self.assertIn("github.event_name == 'workflow_dispatch'", workflow)
         self.assertIn('if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]', workflow)
-        self.assertIn('echo "should_release=true" >> "$GITHUB_OUTPUT"', workflow)
+        self.assertIn('echo "should_render=true" >> "$GITHUB_OUTPUT"', workflow)
+
+    def test_office_rendering_is_gated_by_artifact_changes(self) -> None:
+        workflow = (ROOT / ".github" / "workflows" / "build.yml").read_text(encoding="utf-8")
+
+        self.assertIn("artifact-changes:", workflow)
+        self.assertIn("needs: artifact-changes", workflow)
+        self.assertIn("if: needs.artifact-changes.outputs.should_render == 'true'", workflow)
+        self.assertIn("needs.artifact-changes.outputs.should_render == 'true'", workflow)
 
     def test_changed_files_remain_outside_release_trigger_paths(self) -> None:
         changed = {
