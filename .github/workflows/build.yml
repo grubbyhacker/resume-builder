@@ -26,7 +26,49 @@ jobs:
       - name: Run checks
         run: make check
 
+  artifact-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      should_render: ${{ steps.changed.outputs.should_render }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Check for resume artifact changes
+        id: changed
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
+            echo "Manual release requested for ${GITHUB_SHA}"
+            echo "should_render=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [[ "${GITHUB_EVENT_NAME}" == "pull_request" ]]; then
+            changed_files="$(git diff --name-only "${{ github.event.pull_request.base.sha }}" "${GITHUB_SHA}")"
+          elif [[ "${{ github.event.before }}" =~ ^0+$ ]]; then
+            changed_files="$(git show --pretty='' --name-only HEAD)"
+          else
+            changed_files="$(git diff --name-only "${{ github.event.before }}" "${GITHUB_SHA}")"
+          fi
+
+          echo "Changed files:"
+          printf '%s\n' "$changed_files"
+
+          artifact_paths='^(resume\.yaml|schema/.*|templates/.*|scripts/.*|pyproject\.toml|uv\.lock|Makefile|mise\.toml|\.devcontainer/(office-check\.Dockerfile|fontconfig\.conf))$'
+          if printf '%s\n' "$changed_files" | grep -Eq "$artifact_paths"; then
+            echo "should_render=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "should_render=false" >> "$GITHUB_OUTPUT"
+          fi
+
   office-render:
+    needs: artifact-changes
+    if: needs.artifact-changes.outputs.should_render == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
@@ -45,52 +87,16 @@ jobs:
           name: office-render
           path: output/office-render/
 
-  release-needed:
-    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
-    runs-on: ubuntu-latest
-    outputs:
-      should_release: ${{ steps.changed.outputs.should_release }}
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v7
-        with:
-          fetch-depth: 2
-
-      - name: Check for resume artifact changes
-        id: changed
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
-            echo "Manual release requested for ${GITHUB_SHA}"
-            echo "should_release=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          if git rev-parse --verify HEAD^ >/dev/null 2>&1; then
-            changed_files="$(git diff --name-only HEAD^ HEAD)"
-          else
-            changed_files="$(git show --pretty='' --name-only HEAD)"
-          fi
-
-          echo "Changed files:"
-          printf '%s\n' "$changed_files"
-
-          artifact_paths='^(resume\.yaml|schema/.*|templates/.*|scripts/.*|pyproject\.toml|uv\.lock|Makefile|mise\.toml|\.devcontainer/(office-check\.Dockerfile|fontconfig\.conf))$'
-          if printf '%s\n' "$changed_files" | grep -Eq "$artifact_paths"; then
-            echo "should_release=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "should_release=false" >> "$GITHUB_OUTPUT"
-          fi
-
   release:
-    if: needs.release-needed.outputs.should_release == 'true'
+    if: >-
+      always() && github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+      && needs.artifact-changes.outputs.should_render == 'true'
+      && needs.validate.result == 'success' && needs.office-render.result == 'success'
     runs-on: ubuntu-latest
     needs:
       - validate
       - office-render
-      - release-needed
+      - artifact-changes
     permissions:
       contents: write
     steps:

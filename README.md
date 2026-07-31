@@ -409,6 +409,8 @@ On pushes to `main`, a release-classification job examines the changed paths. It
 
 Documentation, agent instructions, Dependabot configuration, and workflow-only changes do not create resume releases. A release is intended to mean that the downloadable resume itself may have changed.
 
+The same classification gates the expensive Office render job on pull requests and pushes. Changes outside the artifact-producing paths still run the normal validation job, but skip the LibreOffice container work.
+
 To deliberately publish the current `main` revision without changing a resume input, run the **Build** workflow from the repository's **Actions** page and select **Run workflow** on `main`. This manual path bypasses changed-path classification but still runs the normal validation, Office rendering, release-contract verification, and draft-then-publish sequence.
 
 The release job waits for validation and Office checks, sets a UTC build date and short commit SHA, rebuilds all artifacts in the shared Office container, and publishes:
