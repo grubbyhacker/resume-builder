@@ -23,9 +23,17 @@ ASSET_NAMES = {
     "Roger_Fleig_20260714.docx",
     "Roger_Fleig_20260714.pdf",
 }
+STABLE_ASSET_NAMES = {
+    "resume.md",
+    "resume.structured.md",
+    "resume.docx",
+    "resume.pdf",
+}
 
 
-def release_payload(*, draft: bool = True, names: set[str] = ASSET_NAMES) -> dict[str, object]:
+def release_payload(
+    *, draft: bool = True, names: set[str] = ASSET_NAMES | STABLE_ASSET_NAMES, digests: dict[str, str] | None = None
+) -> dict[str, object]:
     return {
         "tag_name": RELEASE_TAG,
         "target_commitish": SOURCE_SHA,
@@ -35,7 +43,7 @@ def release_payload(*, draft: bool = True, names: set[str] = ASSET_NAMES) -> dic
                 "name": name,
                 "state": "uploaded",
                 "size": 100,
-                "digest": "sha256:" + ("a" * 64),
+                "digest": (digests or {}).get(name, "sha256:" + ("a" * 64)),
                 "content_type": next(
                     content_type
                     for suffix, content_type in CHECKER.EXPECTED_CONTENT_TYPES.items()
@@ -82,8 +90,8 @@ class ReleaseContractTests(unittest.TestCase):
             expected_draft=True,
         )
 
-        missing = release_payload(names=ASSET_NAMES - {"Roger_Fleig_20260714.pdf"})
-        with self.assertRaisesRegex(CHECKER.ContractError, "exactly the four expected"):
+        missing = release_payload(names=(ASSET_NAMES | STABLE_ASSET_NAMES) - {"Roger_Fleig_20260714.pdf"})
+        with self.assertRaisesRegex(CHECKER.ContractError, "expected archival and stable"):
             CHECKER.validate_release_payload(
                 missing,
                 source_sha=SOURCE_SHA,
@@ -103,6 +111,17 @@ class ReleaseContractTests(unittest.TestCase):
                 expected_draft=True,
             )
 
+    def test_release_payload_requires_stable_assets_to_match_archival_assets(self) -> None:
+        mismatched = release_payload(digests={"resume.pdf": "sha256:" + ("b" * 64)})
+        with self.assertRaisesRegex(CHECKER.ContractError, "does not match archival"):
+            CHECKER.validate_release_payload(
+                mismatched,
+                source_sha=SOURCE_SHA,
+                release_tag=RELEASE_TAG,
+                expected=ASSET_NAMES,
+                expected_draft=True,
+            )
+
     def test_workflow_drafts_verifies_then_publishes_exact_sha(self) -> None:
         workflow = (ROOT / ".github" / "workflows" / "build.yml").read_text(encoding="utf-8")
         draft = workflow.index("draft: true")
@@ -110,6 +129,8 @@ class ReleaseContractTests(unittest.TestCase):
         publish = workflow.index("Publish verified GitHub release")
 
         self.assertIn("target_commitish: ${{ github.sha }}", workflow)
+        self.assertIn("Create stable public release assets", workflow)
+        self.assertIn("output/release-assets/resume.pdf", workflow)
         self.assertLess(draft, verify)
         self.assertLess(verify, publish)
         self.assertIn("-F draft=false", workflow[publish:])

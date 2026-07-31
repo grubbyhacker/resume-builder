@@ -416,6 +416,8 @@ The release job waits for validation and Office checks, sets a UTC build date an
 - DOCX
 - PDF
 
+Each release contains dated archival assets (for example, `Roger_Fleig_YYYYMMDD.pdf`) and byte-identical stable public copies named `resume.md`, `resume.structured.md`, `resume.docx`, and `resume.pdf`. The stable copies are the permanent public download endpoints, such as `releases/latest/download/resume.pdf`; the dated files remain the auditable historical record.
+
 Tags use the immutable format:
 
 ```text

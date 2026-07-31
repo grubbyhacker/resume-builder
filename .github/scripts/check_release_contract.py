@@ -18,6 +18,18 @@ EXPECTED_CONTENT_TYPES = {
     ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     ".pdf": "application/pdf",
 }
+STABLE_ASSET_NAMES = {
+    "resume.md",
+    "resume.structured.md",
+    "resume.docx",
+    "resume.pdf",
+}
+STABLE_ASSET_SUFFIXES = {
+    "resume.md": ".md",
+    "resume.structured.md": ".structured.md",
+    "resume.docx": ".docx",
+    "resume.pdf": ".pdf",
+}
 
 
 class ContractError(ValueError):
@@ -64,6 +76,20 @@ def validate_local_assets(output_dir: Path, expected: set[str]) -> None:
         )
 
 
+def expected_release_asset_names(archival_assets: set[str]) -> set[str]:
+    return archival_assets | STABLE_ASSET_NAMES
+
+
+def archival_asset_name_for(stable_asset_name: str, archival_assets: set[str]) -> str:
+    suffix = STABLE_ASSET_SUFFIXES[stable_asset_name]
+    matches = [name for name in archival_assets if name.endswith(suffix)]
+    if stable_asset_name == "resume.md":
+        matches = [name for name in matches if not name.endswith(".structured.md")]
+    if len(matches) != 1:
+        raise ContractError(f"could not identify the archival counterpart for {stable_asset_name!r}")
+    return matches[0]
+
+
 def validate_release_payload(
     payload: object,
     *,
@@ -85,10 +111,11 @@ def validate_release_payload(
     if not isinstance(assets, list):
         raise ContractError("release API response has no asset list")
     names = [asset.get("name") for asset in assets if isinstance(asset, dict)]
-    if len(assets) != 4 or len(names) != 4 or set(names) != expected:
-        raise ContractError(f"release must contain exactly the four expected assets; found={names}")
-    if len([name for name in names if name.endswith(".structured.md")]) != 1:
-        raise ContractError("release must contain exactly one structured Markdown asset")
+    expected_release = expected_release_asset_names(expected)
+    if len(assets) != len(expected_release) or len(names) != len(expected_release) or set(names) != expected_release:
+        raise ContractError(f"release must contain exactly the expected archival and stable assets; found={names}")
+    if len([name for name in names if name.endswith(".structured.md")]) != 2:
+        raise ContractError("release must contain exactly one archival and one stable structured Markdown asset")
 
     for asset in assets:
         if not isinstance(asset, dict):
@@ -106,6 +133,12 @@ def validate_release_payload(
             raise ContractError(f"release asset {name!r} has an invalid size")
         if not isinstance(asset.get("digest"), str) or DIGEST_PATTERN.fullmatch(asset["digest"]) is None:
             raise ContractError(f"release asset {name!r} lacks a SHA-256 digest")
+
+    assets_by_name = {asset["name"]: asset for asset in assets}
+    for stable_name in STABLE_ASSET_NAMES:
+        archival_name = archival_asset_name_for(stable_name, expected)
+        if assets_by_name[stable_name]["digest"] != assets_by_name[archival_name]["digest"]:
+            raise ContractError(f"stable asset {stable_name!r} does not match archival asset {archival_name!r}")
 
 
 def parse_bool(value: str) -> bool:

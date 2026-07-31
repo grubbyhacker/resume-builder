@@ -118,6 +118,15 @@ jobs:
           --source-sha "${GITHUB_SHA}"
           --release-tag "${{ steps.metadata.outputs.release_tag }}"
 
+      - name: Create stable public release assets
+        run: |
+          set -euo pipefail
+          mkdir -p output/release-assets
+          cp "${{ steps.metadata.outputs.markdown_asset }}" output/release-assets/resume.md
+          cp "${{ steps.metadata.outputs.structured_markdown_asset }}" output/release-assets/resume.structured.md
+          cp "${{ steps.metadata.outputs.docx_asset }}" output/release-assets/resume.docx
+          cp "${{ steps.metadata.outputs.pdf_asset }}" output/release-assets/resume.pdf
+
       - name: Create draft GitHub release and upload assets
         id: draft_release
         uses: softprops/action-gh-release@v3
@@ -133,6 +142,10 @@ jobs:
             ${{ steps.metadata.outputs.structured_markdown_asset }}
             ${{ steps.metadata.outputs.docx_asset }}
             ${{ steps.metadata.outputs.pdf_asset }}
+            output/release-assets/resume.md
+            output/release-assets/resume.structured.md
+            output/release-assets/resume.docx
+            output/release-assets/resume.pdf
 
       - name: Verify draft release assets
         env:
