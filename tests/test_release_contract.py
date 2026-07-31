@@ -132,6 +132,9 @@ class ReleaseContractTests(unittest.TestCase):
         self.assertIn("Create stable public release assets", workflow)
         self.assertIn('stable_assets_dir="${RUNNER_TEMP}/resume-release-assets"', workflow)
         self.assertIn("${{ steps.stable_assets.outputs.directory }}/resume.pdf", workflow)
+        self.assertIn("Upload verified release artifacts", workflow)
+        self.assertIn("Download verified release artifacts", workflow)
+        self.assertNotIn("Build release artifacts", workflow)
         self.assertLess(draft, verify)
         self.assertLess(verify, publish)
         self.assertIn("-F draft=false", workflow[publish:])
@@ -151,6 +154,7 @@ class ReleaseContractTests(unittest.TestCase):
         self.assertIn("needs: artifact-changes", workflow)
         self.assertIn("if: needs.artifact-changes.outputs.should_render == 'true'", workflow)
         self.assertIn("needs.artifact-changes.outputs.should_render == 'true'", workflow)
+        self.assertIn("RESUME_BUILD_DATE: ${{ needs.artifact-changes.outputs.build_date }}", workflow)
 
     def test_changed_files_remain_outside_release_trigger_paths(self) -> None:
         changed = {
