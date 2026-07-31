@@ -30,6 +30,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       should_render: ${{ steps.changed.outputs.should_render }}
+      build_date: ${{ steps.metadata.outputs.build_date }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
@@ -66,10 +67,17 @@ jobs:
             echo "should_render=false" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Set build metadata
+        id: metadata
+        run: echo "build_date=$(date -u +%Y%m%d)" >> "$GITHUB_OUTPUT"
+
   office-render:
     needs: artifact-changes
     if: needs.artifact-changes.outputs.should_render == 'true'
     runs-on: ubuntu-latest
+    env:
+      RESUME_BUILD_DATE: ${{ needs.artifact-changes.outputs.build_date }}
+      RESUME_BUILD_SHA: ${{ github.sha }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
@@ -87,6 +95,14 @@ jobs:
           name: office-render
           path: output/office-render/
 
+      - name: Upload verified release artifacts
+        if: >-
+          github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+        uses: actions/upload-artifact@v7
+        with:
+          name: verified-release-artifacts
+          path: output/
+
   release:
     if: >-
       always() && github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
@@ -99,9 +115,18 @@ jobs:
       - artifact-changes
     permissions:
       contents: write
+    env:
+      RESUME_BUILD_DATE: ${{ needs.artifact-changes.outputs.build_date }}
+      RESUME_BUILD_SHA: ${{ github.sha }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
+
+      - name: Download verified release artifacts
+        uses: actions/download-artifact@v8
+        with:
+          name: verified-release-artifacts
+          path: output
 
       - name: Install mise
         uses: jdx/mise-action@v4
@@ -111,15 +136,6 @@ jobs:
 
       - name: Install dependencies
         run: mise exec -- uv sync
-
-      - name: Set release build date
-        run: echo "RESUME_BUILD_DATE=$(date -u +%Y%m%d)" >> "$GITHUB_ENV"
-
-      - name: Set release build SHA
-        run: echo "RESUME_BUILD_SHA=${GITHUB_SHA::7}" >> "$GITHUB_ENV"
-
-      - name: Build release artifacts
-        run: mise run render-release-docker
 
       - name: Export build metadata
         id: metadata

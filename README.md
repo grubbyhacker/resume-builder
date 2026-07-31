@@ -394,7 +394,7 @@ The registry is where deliberate ugliness is justified. A workaround that makes 
 
 `.github/workflows/build.yml` runs on pull requests and pushes to `main`.
 
-The validation job installs the pinned toolchain and runs `make check`. A separate Office job runs the shared pinned Office container and uploads `output/office-render/` even when the check fails so the rendered evidence remains available for diagnosis. Local verification, CI verification, and release rendering therefore use the same LibreOffice, Poppler, Fontconfig, and font environment.
+The validation job installs the pinned toolchain and runs `make check`. A separate Office job runs a minimal pinned Office container and uploads `output/office-render/` even when the check fails so the rendered evidence remains available for diagnosis. Local verification, CI verification, and release rendering therefore use the same LibreOffice, Poppler, Fontconfig, and font environment.
 
 On pushes to `main`, a release-classification job examines the changed paths. It requests a release only when files capable of changing generated resume artifacts were modified, including:
 
@@ -413,7 +413,7 @@ The same classification gates the expensive Office render job on pull requests a
 
 To deliberately publish the current `main` revision without changing a resume input, run the **Build** workflow from the repository's **Actions** page and select **Run workflow** on `main`. This manual path bypasses changed-path classification but still runs the normal validation, Office rendering, release-contract verification, and draft-then-publish sequence.
 
-The release job waits for validation and Office checks, sets a UTC build date and short commit SHA, rebuilds all artifacts in the shared Office container, and publishes:
+The release job waits for validation and Office checks, then publishes the exact artifact set built and verified by the Office job. It sets a UTC build date and short commit SHA before that build begins, so the release metadata and artifact names remain deterministic without rebuilding the documents in a second container.
 
 - ATS Markdown
 - structured Markdown

@@ -1,4 +1,5 @@
-FROM mcr.microsoft.com/devcontainers/base:ubuntu-24.04@sha256:d94c97dd9cacf183d0a6fd12a8e87b526e9e928307674ae9c94139139c0c6eae
+FROM ghcr.io/astral-sh/uv:0.11.23@sha256:d0a0a753ab981624b49c97abc98821c1c09f4ca69d1ef5cee69c501be3d88479 AS uv
+FROM python:3.12.13-slim-bookworm@sha256:d50fb7611f86d04a3b0471b46d7557818d88983fc3136726336b2a4c657aa30b
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV MISE_YES=1
@@ -8,24 +9,18 @@ ENV UV_CACHE_DIR=/opt/uv-cache
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         ca-certificates \
-        curl \
         fontconfig \
         fonts-liberation \
-        git \
         libreoffice-writer \
         make \
         poppler-utils \
-        unzip \
     && rm -rf /var/lib/apt/lists/*
 
 COPY .devcontainer/fontconfig.conf /etc/fonts/conf.d/99-resume-builder.conf
 RUN fc-cache -f
 
-RUN curl https://mise.run | sh \
-    && mv /root/.local/bin/mise /usr/local/bin/mise
+COPY --from=uv /uv /uvx /bin/
 
 WORKDIR /opt/resume-builder
 COPY mise.toml pyproject.toml uv.lock ./
-RUN mise trust /opt/resume-builder/mise.toml \
-    && mise install \
-    && mise exec -- uv sync --locked
+RUN uv sync --locked --no-install-project
