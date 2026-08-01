@@ -220,11 +220,14 @@ jobs:
       # Soft-fails: a missing/invalid secret must not mark an otherwise
       # successful resume release as failed.
       - name: Notify thoughts to redeploy with the new resume
-        if: ${{ secrets.THOUGHTS_DISPATCH_TOKEN != '' }}
         continue-on-error: true
         env:
           GH_TOKEN: ${{ secrets.THOUGHTS_DISPATCH_TOKEN }}
         run: |
+          if [[ -z "${GH_TOKEN:-}" ]]; then
+            echo "THOUGHTS_DISPATCH_TOKEN is not set; skipping thoughts redeploy notification." >&2
+            exit 0
+          fi
           gh api repos/grubbyhacker/thoughts/dispatches \
             --method POST \
             -f event_type=resume-published
