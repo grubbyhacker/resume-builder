@@ -211,3 +211,23 @@ jobs:
             --release-tag "${{ steps.metadata.outputs.release_tag }}" \
             --release-json "${RUNNER_TEMP}/resume-release-published.json" \
             --expected-draft false
+
+      # thoughts self-hosts resume.md/resume.structured.md from `latest` at
+      # its own deploy time (agent fetch tools reject the redirect + generic
+      # octet-stream content type on a direct release-asset download). This
+      # nudges it to redeploy now instead of waiting for its next unrelated
+      # commit, so the self-hosted copy doesn't lag behind this release.
+      # Soft-fails: a missing/invalid secret must not mark an otherwise
+      # successful resume release as failed.
+      - name: Notify thoughts to redeploy with the new resume
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.THOUGHTS_DISPATCH_TOKEN }}
+        run: |
+          if [[ -z "${GH_TOKEN:-}" ]]; then
+            echo "THOUGHTS_DISPATCH_TOKEN is not set; skipping thoughts redeploy notification." >&2
+            exit 0
+          fi
+          gh api repos/grubbyhacker/thoughts/dispatches \
+            --method POST \
+            -f event_type=resume-published
