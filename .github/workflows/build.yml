@@ -150,8 +150,32 @@ jobs:
           --source-sha "${GITHUB_SHA}"
           --release-tag "${{ steps.metadata.outputs.release_tag }}"
 
+      # The release tag is v<date>-<short sha>, so distinct commits on the same
+      # day get distinct tags. Re-running this workflow against a commit that
+      # already released regenerates the identical tag, which would otherwise
+      # collide with its own published release and fail the draft check. In
+      # that case the release is already correct, so skip straight to the
+      # redeploy notification, which is the only part worth repeating.
+      - name: Check for an existing published release
+        id: existing_release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.metadata.outputs.release_tag }}
+        run: |
+          set -euo pipefail
+          if release_json=$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${RELEASE_TAG}" 2>/dev/null); then
+            if [[ "$(jq -r '.draft' <<<"${release_json}")" == "false" ]]; then
+              echo "published=true" >> "$GITHUB_OUTPUT"
+              echo "::notice::Release ${RELEASE_TAG} is already published for this commit. Skipping release creation; re-sending the redeploy notification only."
+              exit 0
+            fi
+            echo "::notice::Release ${RELEASE_TAG} already exists as a draft and will be updated, then published."
+          fi
+          echo "published=false" >> "$GITHUB_OUTPUT"
+
       - name: Create stable public release assets
         id: stable_assets
+        if: steps.existing_release.outputs.published != 'true'
         run: |
           set -euo pipefail
           stable_assets_dir="${RUNNER_TEMP}/resume-release-assets"
@@ -164,6 +188,7 @@ jobs:
 
       - name: Create draft GitHub release and upload assets
         id: draft_release
+        if: steps.existing_release.outputs.published != 'true'
         uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ steps.metadata.outputs.release_tag }}
@@ -183,6 +208,7 @@ jobs:
             ${{ steps.stable_assets.outputs.directory }}/resume.pdf
 
       - name: Verify draft release assets
+        if: steps.existing_release.outputs.published != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_ID: ${{ steps.draft_release.outputs.id }}
@@ -196,6 +222,7 @@ jobs:
             --expected-draft true
 
       - name: Publish verified GitHub release
+        if: steps.existing_release.outputs.published != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_ID: ${{ steps.draft_release.outputs.id }}
@@ -224,10 +251,15 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.THOUGHTS_DISPATCH_TOKEN }}
         run: |
+          stale_warning="fleig.us will keep serving the previously deployed resume until its next commit or a manual run of its deploy workflow."
           if [[ -z "${GH_TOKEN:-}" ]]; then
-            echo "THOUGHTS_DISPATCH_TOKEN is not set; skipping thoughts redeploy notification." >&2
+            echo "::warning::THOUGHTS_DISPATCH_TOKEN is not set. ${stale_warning}"
             exit 0
           fi
-          gh api repos/grubbyhacker/thoughts/dispatches \
+          if ! response=$(gh api repos/grubbyhacker/thoughts/dispatches \
             --method POST \
-            -f event_type=resume-published
+            -f event_type=resume-published 2>&1); then
+            echo "::warning::Could not notify thoughts to redeploy: ${response//$'\n'/ }. ${stale_warning} Check that THOUGHTS_DISPATCH_TOKEN grants Contents: read and write on grubbyhacker/thoughts and has not expired."
+            exit 0
+          fi
+          echo "::notice::Notified thoughts to redeploy with the new resume."
