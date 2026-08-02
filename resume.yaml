@@ -5,8 +5,7 @@ profile:
   phone: 425-516-9049
   linkedin: https://linkedin.com/in/rogerfleig
   websites:
-    - https://rogerfleig.substack.com
-    - https://fleig.us/writing
+    - https://fleig.us
 
 headline: Engineering Leader - Developer Productivity, Infrastructure, and AI Platform Engineering
 
@@ -40,9 +39,9 @@ experience:
         end: 2026-03
         description: Founded and built the engineering productivity function from zero, personally hiring and growing the team to 10 engineers and establishing developer experience as a discipline within a rapidly scaling AI cloud company.
         bullets:
-          - Set the enterprise AI coding platform strategy, directing the rollout of Windsurf and Claude to 500+ users, owning enablement, adoption, and vendor management across Anthropic, Windsurf, and GitLab.
+          - Set the enterprise AI coding platform strategy, directing the rollout of Windsurf and Claude Code to 500+ users, roughly 70% of engineering, owning enablement, adoption, and vendor management across Anthropic, Windsurf, and GitLab.
           - Built the operating model for enterprise AI tool adoption, covering provisioning, usage reporting, support channels, and security review, establishing the governance framework the org now runs on.
-          - Directed the modernization of CI/CD infrastructure, migrating off aging local hardware to a GKE-based, multi-architecture runner platform built for scale.
+          - Directed the modernization of CI/CD infrastructure, migrating off aging local hardware to an autoscaling, multi-architecture GKE runner platform with build and container caching, roughly halving build times and ending the hardware failures that stalled pipelines, while engineering grew from about 70 to over 200.
           - Absorbed peak build load and increased code churn from AI tooling, and enabled rapid adoption of ARM64 builds for new NVIDIA AI fleet platforms.
           - Established repository and platform governance standards across about 400 repositories, driving technical-debt reduction and compliance campaigns through Terraform-managed infrastructure and health tooling.
   - company: Google
@@ -55,7 +54,9 @@ experience:
         bullets:
           - "Core ML Infrastructure and Cloud AI: Led concurrent productivity organizations for Core ML and Vertex AI, managing a 60-engineer team supporting about 1,200 Core ML engineers and directing technical-debt reduction across TensorFlow, JAX, XLA, and evaluation systems. Directed CI/CD strategy for the generative AI development lifecycle in Google Cloud, supporting Gemini and other first-party models."
           - "Core Data Infrastructure: Led the developer productivity and engineering-excellence organization serving about 1,200 engineers building the data foundations behind Search, Ads, YouTube, and Geo. Drove code-health initiatives across one of Google's most critical infrastructure organizations."
-          - "Google-wide Code Health and Reliability: Built and led the team responsible for developer tooling used broadly across Google engineering, elevating configuration management as a first-class engineering concern. Sponsored applied research and patent work by teams under my leadership in partnership with academic collaborators. The portfolio included publications at ICSE, ESEC/FSE, and IEEE TSE and issued U.S. patents in code coverage, mutation testing, and ML-assisted developer tooling."
+          - "Google-wide Code Health and Reliability: Built and led the team responsible for developer tooling used broadly across Google engineering. The team built Sensenmann, which automatically deleted dead code at scale, submitting over 1,000 changelists a week and removing more than 5% of all C++ at Google, nearly half a billion lines in total, and AutoCommenter, which applied machine learning to code review for every Google engineer."
+          - "Code Coverage and Engineering Standards: Built Google's code coverage infrastructure, making code review 5% faster and cutting review cost 11%, and introduced Productive Coverage, a new coverage measure that reduced review cost a further 2%. Elevated configuration management as a first-class engineering concern."
+          - "Research and Patents: Sponsored applied research and patent work by teams under my leadership in partnership with academic collaborators, including publications at ICSE, ICSE-SEIP, ESEC/FSE, IEEE TSE, and AIware, and issued U.S. patents in code coverage, mutation testing, and ML-assisted developer tooling."
       - title: Senior Engineering Manager
         start: 2011-04
         end: 2018-08
